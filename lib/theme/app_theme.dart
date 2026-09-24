@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'app_colors.dart';
 
@@ -18,7 +17,9 @@ abstract final class AppTheme {
         onSurface: AppColors.textPrimary,
       ),
     );
-    final text = GoogleFonts.plusJakartaSansTextTheme(base.textTheme);
+    final text = base.textTheme.apply(
+      fontFamily: 'Plus Jakarta Sans',
+    );
     return base.copyWith(
       textTheme: text,
       appBarTheme: const AppBarTheme(
