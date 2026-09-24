@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'ai/summary.dart';
 import 'data/dummy_data.dart';
 import 'firebase_options.dart';
 import 'models/category.dart';
@@ -86,6 +87,8 @@ void main() async {
       store: seedStore(),
       authService: AuthService(),
       notificationService: notifications,
+      // Real Gemini path (template-only until --dart-define=GEMINI_API_KEY).
+      summaryService: SummaryService(llm: const GeminiLlmBackend()),
     ),
   );
 }
@@ -94,11 +97,13 @@ void main() async {
 /// [AuthService.authStateChanges] — never a one-time check.
 /// [FirestoreService] is exposed per signed-in user (null when signed out).
 class NdohApp extends StatelessWidget {
-  const NdohApp({super.key, this.store, this.authService, this.notificationService});
+  const NdohApp(
+      {super.key, this.store, this.authService, this.notificationService, this.summaryService});
 
   final ExpenseStore? store;
   final AuthService? authService;
   final NotificationService? notificationService;
+  final SummaryService? summaryService;
 
   @override
   Widget build(BuildContext context) {
@@ -112,6 +117,9 @@ class NdohApp extends StatelessWidget {
         ),
         ChangeNotifierProvider<NotificationService>.value(
           value: notificationService ?? NotificationService(),
+        ),
+        Provider<SummaryService>.value(
+          value: summaryService ?? SummaryService(),
         ),
         ProxyProvider<AuthService, FirestoreService?>(
           update: (_, auth, _) {

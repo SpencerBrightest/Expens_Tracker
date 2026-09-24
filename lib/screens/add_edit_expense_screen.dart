@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../data/dummy_data.dart';
 import '../models/expense.dart';
 import '../ai/category_suggest.dart';
+import '../ai/summary.dart';
 import '../providers/expense_store.dart';
 import '../services/firestore_service.dart';
 import '../services/notification_service.dart';
@@ -106,6 +107,8 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
             spent: store.totalByCategory(categoryId),
             limit: cat.monthlyLimit,
           ).ignore();
+      // Fire-and-forget AI summary patch (never blocks Save).
+      _patchSummaryAsync(expense, cat.name);
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
@@ -115,6 +118,40 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// Async summary patch: saves happen immediately with the template
+  /// summary; the LLM-cleaned version patches in when ready. All errors
+  /// swallowed — Save must never fail because of AI.
+  void _patchSummaryAsync(Expense expense, String categoryName) {
+    final store = context.read<ExpenseStore>();
+    final service = context.read<FirestoreService?>();
+    final summarizer = context.read<SummaryService>();
+    Future(() async {
+      try {
+        final summary = await summarizer.summarize(
+          expense: expense,
+          categoryName: categoryName,
+        );
+        if (summary == expense.summary) return;
+        final updated = expense.copyWith(summary: summary);
+        if (service == null) {
+          try {
+            store.updateExpense(updated);
+          } catch (_) {
+            // Expense may be gone (deleted/rolled back); ignore.
+          }
+        } else {
+          try {
+            await store.persistExpense(service, updated);
+          } catch (_) {
+            // Remote patch failed; local template summary stands.
+          }
+        }
+      } catch (_) {
+        // Never let AI break the app.
+      }
+    }).ignore();
   }
 
   @override

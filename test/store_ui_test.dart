@@ -7,6 +7,7 @@ import 'package:expense_tracker/screens/analytics_screen.dart';
 import 'package:expense_tracker/screens/categories_screen.dart';
 import 'package:expense_tracker/screens/home_tab.dart';
 import 'package:expense_tracker/screens/transactions_screen.dart';
+import 'package:expense_tracker/ai/summary.dart';
 import 'package:expense_tracker/services/firestore_service.dart';
 import 'package:expense_tracker/services/notification_service.dart';
 import 'package:expense_tracker/theme/app_theme.dart';
@@ -49,6 +50,7 @@ Widget _withStore(ExpenseStore store, Widget child,
         create: (_) =>
             NotificationService(backend: FakeNotificationBackend()),
       ),
+      Provider<SummaryService>.value(value: SummaryService()),
     ],
     child: MaterialApp(theme: AppTheme.light(), home: Scaffold(body: child)),
   );
