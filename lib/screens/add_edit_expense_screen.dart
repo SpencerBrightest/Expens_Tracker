@@ -5,6 +5,7 @@ import '../data/dummy_data.dart';
 import '../models/expense.dart';
 import '../providers/expense_store.dart';
 import '../services/firestore_service.dart';
+import '../services/notification_service.dart';
 import '../theme/app_colors.dart';
 
 /// Add/Edit modal. Saves to [ExpenseStore] locally and — when signed in
@@ -77,6 +78,13 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
         await store.persistExpense(service, expense);
       }
       if (!mounted) return;
+      // Fire-and-forget threshold check (never blocks Save).
+      final cat = store.categoryFor(expense);
+      context.read<NotificationService>().budgetAlertIfNeeded(
+            categoryName: cat.name,
+            spent: store.totalByCategory(categoryId),
+            limit: cat.monthlyLimit,
+          ).ignore();
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;

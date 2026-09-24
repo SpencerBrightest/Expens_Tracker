@@ -8,11 +8,14 @@ import 'package:expense_tracker/screens/categories_screen.dart';
 import 'package:expense_tracker/screens/home_tab.dart';
 import 'package:expense_tracker/screens/transactions_screen.dart';
 import 'package:expense_tracker/services/firestore_service.dart';
+import 'package:expense_tracker/services/notification_service.dart';
 import 'package:expense_tracker/theme/app_theme.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+
+import 'fakes.dart';
 
 Category _cat() => Category(
       id: 'c1',
@@ -42,6 +45,10 @@ Widget _withStore(ExpenseStore store, Widget child,
     providers: [
       ChangeNotifierProvider<ExpenseStore>.value(value: store),
       Provider<FirestoreService?>.value(value: service),
+      ChangeNotifierProvider<NotificationService>(
+        create: (_) =>
+            NotificationService(backend: FakeNotificationBackend()),
+      ),
     ],
     child: MaterialApp(theme: AppTheme.light(), home: Scaffold(body: child)),
   );

@@ -1,6 +1,7 @@
 import 'package:expense_tracker/providers/expense_store.dart';
 import 'package:expense_tracker/services/auth_service.dart';
 import 'package:expense_tracker/services/firestore_service.dart';
+import 'package:expense_tracker/services/notification_service.dart';
 import 'package:expense_tracker/widgets/auth_gate.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,6 +15,10 @@ Widget _withAuth(AuthService service, Widget child) {
       ChangeNotifierProvider<AuthService>.value(value: service),
       ChangeNotifierProvider<ExpenseStore>(
         create: (_) => ExpenseStore(),
+      ),
+      ChangeNotifierProvider<NotificationService>(
+        create: (_) =>
+            NotificationService(backend: FakeNotificationBackend()),
       ),
       Provider<FirestoreService?>.value(value: null),
     ],

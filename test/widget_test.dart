@@ -6,6 +6,7 @@ import 'package:expense_tracker/screens/homepage_screen.dart';
 import 'package:expense_tracker/screens/splash_screen.dart';
 import 'package:expense_tracker/services/auth_service.dart';
 import 'package:expense_tracker/services/firestore_service.dart';
+import 'package:expense_tracker/services/notification_service.dart';
 import 'package:expense_tracker/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -25,6 +26,10 @@ Widget _wrap(Widget child, {FakeAuthBackend? backend}) {
         create: (_) => AuthService(backend: b),
         // Owned fakes leak their broadcast controller; tests are
         // short-lived so this is acceptable (matches other suites).
+      ),
+      ChangeNotifierProvider<NotificationService>(
+        create: (_) =>
+            NotificationService(backend: FakeNotificationBackend()),
       ),
       Provider<FirestoreService?>.value(value: null),
     ],
@@ -62,6 +67,8 @@ void main() {
       NdohApp(
         store: ExpenseStore(),
         authService: AuthService(backend: backend),
+        notificationService:
+            NotificationService(backend: FakeNotificationBackend()),
       ),
     );
     expect(find.text('Ndoh'), findsOneWidget);
@@ -89,6 +96,10 @@ void main() {
           ),
           ChangeNotifierProvider<AuthService>(
             create: (_) => AuthService(backend: FakeAuthBackend()),
+          ),
+          ChangeNotifierProvider<NotificationService>(
+            create: (_) =>
+                NotificationService(backend: FakeNotificationBackend()),
           ),
           Provider<FirestoreService?>.value(value: null),
         ],
@@ -125,6 +136,10 @@ void main() {
           ),
           ChangeNotifierProvider<AuthService>(
             create: (_) => AuthService(backend: backend),
+          ),
+          ChangeNotifierProvider<NotificationService>(
+            create: (_) =>
+                NotificationService(backend: FakeNotificationBackend()),
           ),
           Provider<FirestoreService?>.value(value: null),
         ],

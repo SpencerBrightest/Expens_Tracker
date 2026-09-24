@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../services/auth_service.dart';
+import '../services/notification_service.dart';
 import '../theme/app_colors.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -9,6 +10,7 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final notifications = context.watch<NotificationService>();
     return SafeArea(
       child: Center(
         child: ConstrainedBox(
@@ -67,15 +69,17 @@ class SettingsScreen extends StatelessWidget {
                       ),
                       title: const Text('Daily Reminder'),
                       subtitle: const Text('Log expenses at 8:00 PM'),
-                      value: true,
-                      onChanged: (_) {},
+                      value: notifications.dailyReminder,
+                      onChanged: (v) =>
+                          notifications.setDailyReminder(v),
                     ),
                     SwitchListTile(
                       secondary: const Icon(Icons.warning_amber_outlined),
                       title: const Text('Budget Alerts'),
                       subtitle: const Text('Alert at 80% & 100% cap'),
-                      value: true,
-                      onChanged: (_) {},
+                      value: notifications.budgetAlerts,
+                      onChanged: (v) =>
+                          notifications.setBudgetAlerts(v),
                     ),
                   ],
                 ),

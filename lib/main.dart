@@ -12,6 +12,7 @@ import 'screens/dashboard_shell.dart';
 import 'screens/homepage_screen.dart';
 import 'services/auth_service.dart';
 import 'services/firestore_service.dart';
+import 'services/notification_service.dart';
 import 'theme/app_theme.dart';
 import 'widgets/auth_gate.dart';
 
@@ -77,10 +78,14 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  final notifications = NotificationService();
+  await notifications.init();
+  await notifications.setDailyReminder(true);
   runApp(
     NdohApp(
       store: seedStore(),
       authService: AuthService(),
+      notificationService: notifications,
     ),
   );
 }
@@ -89,10 +94,11 @@ void main() async {
 /// [AuthService.authStateChanges] — never a one-time check.
 /// [FirestoreService] is exposed per signed-in user (null when signed out).
 class NdohApp extends StatelessWidget {
-  const NdohApp({super.key, this.store, this.authService});
+  const NdohApp({super.key, this.store, this.authService, this.notificationService});
 
   final ExpenseStore? store;
   final AuthService? authService;
+  final NotificationService? notificationService;
 
   @override
   Widget build(BuildContext context) {
@@ -103,6 +109,9 @@ class NdohApp extends StatelessWidget {
         ),
         ChangeNotifierProvider<AuthService>.value(
           value: authService ?? AuthService(),
+        ),
+        ChangeNotifierProvider<NotificationService>.value(
+          value: notificationService ?? NotificationService(),
         ),
         ProxyProvider<AuthService, FirestoreService?>(
           update: (_, auth, _) {
