@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../data/dummy_data.dart';
+import '../ai/insights.dart';
 import '../providers/expense_store.dart';
 import '../theme/app_colors.dart';
 import '../widgets/spending_pie_chart.dart';
@@ -27,7 +28,6 @@ class AnalyticsScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              // Phase 8 replaces this static box with generated insight.
               Card(
                 child: ListTile(
                   leading: Container(
@@ -43,12 +43,14 @@ class AnalyticsScreen extends StatelessWidget {
                     ),
                   ),
                   title: const Text(
-                    'Insight preview',
+                    'Insight',
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
-                  subtitle: const Text(
-                    'You spent 20% more on Food this month',
-                  ),
+                  subtitle: Builder(builder: (context) {
+                    return Text(
+                      buildInsight(context.watch<ExpenseStore>()),
+                    );
+                  }),
                 ),
               ),
               const SizedBox(height: 12),

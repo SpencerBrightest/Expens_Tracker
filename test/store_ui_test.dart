@@ -101,6 +101,8 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text(xafFormat.format(2500)), findsWidgets);
+      // Seeded Food (limit 1000) holds 2500 → over-budget insight.
+      expect(find.textContaining('over budget'), findsOneWidget);
     });
   });
 
