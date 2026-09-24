@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../services/auth_service.dart';
 import '../theme/app_colors.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -80,8 +82,9 @@ class SettingsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               FilledButton(
-                onPressed: () =>
-                    Navigator.pushReplacementNamed(context, '/home'),
+                // The AuthGate listens to authStateChanges and redirects
+                // to Homepage automatically — no explicit nav needed.
+                onPressed: () => context.read<AuthService>().signOut(),
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.expense.withValues(
                     alpha: 0.12,

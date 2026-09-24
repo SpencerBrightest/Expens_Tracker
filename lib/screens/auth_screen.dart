@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../services/auth_service.dart';
 import '../theme/app_colors.dart';
 
-/// Auth: Login/Signup toggle UI only. No Firebase until Phase 5.
+/// Auth: Login/Signup toggle wired to [AuthService] (Phase 5).
+/// Screens never touch firebase_auth directly.
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
 
@@ -13,6 +16,7 @@ class AuthScreen extends StatefulWidget {
 class _AuthScreenState extends State<AuthScreen> {
   bool _isLogin = true;
   bool _obscure = true;
+  bool _busy = false;
   final _email = TextEditingController(text: 'alex.j@example.com');
   final _password = TextEditingController(text: 'Pass123456!');
 
@@ -21,6 +25,32 @@ class _AuthScreenState extends State<AuthScreen> {
     _email.dispose();
     _password.dispose();
     super.dispose();
+  }
+
+  Future<void> _submit() async {
+    setState(() => _busy = true);
+    try {
+      final auth = context.read<AuthService>();
+      if (_isLogin) {
+        await auth.signIn(_email.text, _password.text);
+      } else {
+        await auth.signUp(_email.text, _password.text);
+      }
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/dashboard');
+    } on ArgumentError catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Authentication failed: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   @override
@@ -131,13 +161,19 @@ class _AuthScreenState extends State<AuthScreen> {
                         ),
                         const SizedBox(height: 16),
                         FilledButton(
-                          onPressed: () => Navigator.pushReplacementNamed(
-                            context,
-                            '/dashboard',
-                          ),
-                          child: Text(
-                            _isLogin ? 'Log in' : 'Create account',
-                          ),
+                          onPressed: _busy ? null : _submit,
+                          child: _busy
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : Text(
+                                  _isLogin ? 'Log in' : 'Create account',
+                                ),
                         ),
                       ],
                     ),
