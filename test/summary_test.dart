@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:expense_tracker/ai/summary.dart';
 import 'package:expense_tracker/models/category.dart';
 import 'package:expense_tracker/models/expense.dart';
@@ -8,6 +10,8 @@ import 'package:expense_tracker/services/notification_service.dart';
 import 'package:expense_tracker/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 
 import 'fakes.dart';
@@ -73,6 +77,55 @@ void main() {
         () async {
       const backend = GeminiLlmBackend(apiKey: '');
       expect(await backend.cleanup('some note'), 'some note');
+    });
+
+    group('Gemini HTTP transport (mocked)', () {
+      test('posts note and parses cleaned label', () async {
+        Object? sentBody;
+        final client = MockClient((req) async {
+          expect(req.url.host, 'generativelanguage.googleapis.com');
+          expect(req.url.queryParameters['key'], 'k123');
+          expect(req.headers['Content-Type'], contains('application/json'));
+          sentBody = jsonDecode(req.body);
+          return http.Response(
+            jsonEncode({
+              'candidates': [
+                {
+                  'content': {
+                    'parts': [
+                      {'text': '  bulk grocery restock  '},
+                    ],
+                  },
+                },
+              ],
+            }),
+            200,
+          );
+        });
+        final backend = GeminiLlmBackend(client: client, apiKey: 'k123');
+        expect(await backend.cleanup('a very long messy note'),
+            'bulk grocery restock');
+        expect((sentBody as Map).toString(), contains('a very long messy'));
+      });
+
+      test('non-200 response returns input', () async {
+        final client = MockClient((_) async => http.Response('denied', 403));
+        final backend = GeminiLlmBackend(client: client, apiKey: 'k123');
+        expect(await backend.cleanup('keep me'), 'keep me');
+      });
+
+      test('malformed body returns input', () async {
+        final client = MockClient(
+            (_) async => http.Response(jsonEncode({'nope': []}), 200));
+        final backend = GeminiLlmBackend(client: client, apiKey: 'k123');
+        expect(await backend.cleanup('keep me'), 'keep me');
+      });
+
+      test('requestUri targets generateContent with key', () {
+        final uri = GeminiLlmBackend.requestUri('k123');
+        expect(uri.path, contains('generateContent'));
+        expect(uri.queryParameters['key'], 'k123');
+      });
     });
   });
 
