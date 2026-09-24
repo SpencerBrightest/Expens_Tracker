@@ -112,6 +112,13 @@ class ExpenseStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Empties local expenses (used on sign-out so the next account never
+  /// sees the previous user's data). Categories are left intact.
+  void clear() {
+    _expenses.clear();
+    notifyListeners();
+  }
+
   /// Replaces local state with the user's remote data (Phase 6).
   Future<void> loadFromRemote(FirestoreService svc) async {
     final expenses = await svc.watchExpenses(limit: 500).first;

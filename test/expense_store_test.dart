@@ -75,6 +75,18 @@ void main() {
       expect(() => store.removeExpense('e1'), throwsArgumentError);
     });
 
+    test('clear empties expenses and notifies', () {
+      final store = ExpenseStore(categories: [_cat('c1', 'Food')]);
+      store.addExpense(_exp('e1', 'c1', 100));
+      var notified = 0;
+      store.addListener(() => notified++);
+
+      store.clear();
+      expect(store.expenses, isEmpty);
+      expect(store.totalSpent, 0);
+      expect(notified, 1);
+    });
+
     test('totalByCategory sums only that category', () {
       final store = ExpenseStore(
         categories: [_cat('c1', 'Food'), _cat('c2', 'Transport')],

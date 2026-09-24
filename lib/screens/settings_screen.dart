@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../providers/expense_store.dart';
 import '../services/auth_service.dart';
 import '../services/notification_service.dart';
 import '../theme/app_colors.dart';
@@ -88,7 +89,11 @@ class SettingsScreen extends StatelessWidget {
               FilledButton(
                 // The AuthGate listens to authStateChanges and redirects
                 // to Homepage automatically — no explicit nav needed.
-                onPressed: () => context.read<AuthService>().signOut(),
+                // Local data is wiped first so the next account starts clean.
+                onPressed: () {
+                  context.read<ExpenseStore>().clear();
+                  context.read<AuthService>().signOut();
+                },
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.expense.withValues(
                     alpha: 0.12,
