@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show ChangeNotifier;
 
 import '../models/category.dart';
 import '../models/expense.dart';
+import '../services/firestore_service.dart';
 
 /// Phase-3 in-memory state. Categories cached here (never refetched per
 /// screen). Firestore sync + pagination land in Phase 6; charts read from
@@ -93,5 +94,69 @@ class ExpenseStore extends ChangeNotifier {
     if (i == -1) throw ArgumentError('Unknown expense: $id');
     _expenses.removeAt(i);
     notifyListeners();
+  }
+
+  /// Replaces local state with the user's remote data (Phase 6).
+  Future<void> loadFromRemote(FirestoreService svc) async {
+    final expenses = await svc.watchExpenses(limit: 500).first;
+    final categories = await svc.watchCategories().first;
+    _expenses
+      ..clear()
+      ..addAll(expenses);
+    _categories
+      ..clear()
+      ..addAll(categories);
+    _sortExpenses();
+    notifyListeners();
+  }
+
+  /// Optimistic save: inserts locally first, syncs in the background,
+  /// rolls back only on failure (then rethrows).
+  Future<void> persistExpense(
+    FirestoreService svc,
+    Expense expense,
+  ) async {
+    categoryById(expense.categoryId);
+    final i = _expenses.indexWhere((e) => e.id == expense.id);
+    final previous = i == -1 ? null : _expenses[i];
+    if (i == -1) {
+      _expenses.add(expense);
+    } else {
+      _expenses[i] = expense;
+    }
+    _sortExpenses();
+    notifyListeners();
+    try {
+      await svc.saveExpense(expense);
+    } catch (_) {
+      if (previous == null) {
+        _expenses.removeWhere((e) => e.id == expense.id);
+      } else {
+        final j = _expenses.indexWhere((e) => e.id == expense.id);
+        if (j != -1) _expenses[j] = previous;
+      }
+      _sortExpenses();
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  /// Optimistic delete with rollback on failure.
+  Future<void> deleteExpenseRemote(
+    FirestoreService svc,
+    String id,
+  ) async {
+    final i = _expenses.indexWhere((e) => e.id == id);
+    if (i == -1) throw ArgumentError('Unknown expense: $id');
+    final removed = _expenses.removeAt(i);
+    notifyListeners();
+    try {
+      await svc.deleteExpense(id);
+    } catch (_) {
+      _expenses.add(removed);
+      _sortExpenses();
+      notifyListeners();
+      rethrow;
+    }
   }
 }
