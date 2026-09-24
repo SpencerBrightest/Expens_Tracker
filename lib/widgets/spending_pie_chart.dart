@@ -2,12 +2,11 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../data/dummy_data.dart';
 import '../providers/expense_store.dart';
 import '../theme/app_colors.dart';
 
-/// Donut wired to [ExpenseStore] (Phase 4). Falls back to the Stitch dummy
-/// breakdown when the store is empty so the screen never renders blank.
+/// Donut wired to [ExpenseStore]. Empty store renders an honest empty
+/// state — never fake data.
 class SpendingPieChart extends StatelessWidget {
   const SpendingPieChart({super.key});
 
@@ -23,8 +22,18 @@ class SpendingPieChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final totals = context.watch<ExpenseStore>().totalsByCategory();
-    final entries = (totals.isEmpty ? dummyBreakdown : totals).entries
-        .toList();
+    if (totals.isEmpty) {
+      return const SizedBox(
+        height: 200,
+        child: Center(
+          child: Text(
+            'No spending yet',
+            style: TextStyle(color: AppColors.textSecondary),
+          ),
+        ),
+      );
+    }
+    final entries = totals.entries.toList();
     return SizedBox(
       height: 200,
       child: PieChart(

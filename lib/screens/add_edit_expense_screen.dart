@@ -3,10 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../data/dummy_data.dart';
-import '../models/expense.dart';
 import '../ai/category_suggest.dart';
 import '../ai/summary.dart';
+import '../data/dummy_data.dart';
+import '../models/category.dart';
+import '../models/expense.dart';
 import '../providers/expense_store.dart';
 import '../services/firestore_service.dart';
 import '../services/notification_service.dart';
@@ -28,6 +29,7 @@ class AddEditExpenseScreen extends StatefulWidget {
 class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
   late final TextEditingController _amount;
   late final TextEditingController _note;
+  late final TextEditingController _newCategory;
   String? _categoryId;
   String? _suggestedId;
   Timer? _debounce;
@@ -40,6 +42,7 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
       text: widget.expense?.amount.toInt().toString() ?? '5000',
     );
     _note = TextEditingController(text: widget.expense?.note ?? '');
+    _newCategory = TextEditingController();
     _categoryId = widget.expense?.categoryId;
     _note.addListener(_onNoteChanged);
   }
@@ -63,18 +66,50 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
     _note.removeListener(_onNoteChanged);
     _amount.dispose();
     _note.dispose();
+    _newCategory.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
     final store = context.read<ExpenseStore>();
     final service = context.read<FirestoreService?>();
+    final messenger = ScaffoldMessenger.of(context);
     final categories = store.categories;
-    if (categories.isEmpty) return;
-    final categoryId = _categoryId ?? categories.first.id;
+    // No silent dead-end: with no categories yet, create one inline from
+    // the "New category" field.
+    String categoryId;
+    if (categories.isEmpty) {
+      final name = _newCategory.text.trim();
+      if (name.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Name a category first')),
+        );
+        return;
+      }
+      final created = Category(
+        id: 'c${DateTime.now().microsecondsSinceEpoch}',
+        name: name,
+        monthlyLimit: 0,
+        colorValue: 0xFF2D68FE,
+        iconCodePoint: 0xe318,
+      );
+      try {
+        store.addCategory(created);
+        if (service != null) await service.saveCategory(created);
+      } catch (e) {
+        if (!mounted) return;
+        messenger.showSnackBar(
+          SnackBar(content: Text('Could not save: $e')),
+        );
+        return;
+      }
+      categoryId = created.id;
+    } else {
+      categoryId = _categoryId ?? categories.first.id;
+    }
     final amount = double.tryParse(_amount.text.trim()) ?? 0;
     if (amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         const SnackBar(content: Text('Enter an amount above 0')),
       );
       return;
@@ -211,21 +246,30 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
                 }).toList(),
               ),
               const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: selected,
-                decoration: const InputDecoration(
-                  labelText: 'Category',
+              if (categories.isEmpty)
+                TextField(
+                  controller: _newCategory,
+                  decoration: const InputDecoration(
+                    labelText: 'New category',
+                    hintText: 'e.g. Transport',
+                  ),
+                )
+              else
+                DropdownButtonFormField<String>(
+                  initialValue: selected,
+                  decoration: const InputDecoration(
+                    labelText: 'Category',
+                  ),
+                  items: categories
+                      .map(
+                        (c) => DropdownMenuItem(
+                          value: c.id,
+                          child: Text(c.name),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (v) => setState(() => _categoryId = v),
                 ),
-                items: categories
-                    .map(
-                      (c) => DropdownMenuItem(
-                        value: c.id,
-                        child: Text(c.name),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) => setState(() => _categoryId = v),
-              ),
               const SizedBox(height: 12),
               TextField(
                 controller: _note,

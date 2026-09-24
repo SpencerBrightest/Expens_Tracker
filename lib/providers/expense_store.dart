@@ -119,6 +119,15 @@ class ExpenseStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Adds a category (inline creation from Add/Edit Expense).
+  void addCategory(Category category) {
+    if (_categories.any((c) => c.id == category.id)) {
+      throw ArgumentError('Duplicate category id: ${category.id}');
+    }
+    _categories.add(category);
+    notifyListeners();
+  }
+
   /// Replaces local state with the user's remote data (Phase 6).
   Future<void> loadFromRemote(FirestoreService svc) async {
     final expenses = await svc.watchExpenses(limit: 500).first;

@@ -64,6 +64,78 @@ void main() {
       backend.dispose();
     });
 
+    test('short password throws mentioning 6 characters', () async {
+      final backend = FakeAuthBackend();
+      final service = AuthService(backend: backend);
+      expect(
+        () => service.signUp('a@x.com', '12345'),
+        throwsA(
+          isArgumentError.having(
+            (e) => e.message,
+            'message',
+            contains('6'),
+          ),
+        ),
+      );
+      backend.dispose();
+    });
+
+    test('notifies listeners on backend stream events', () async {
+      final backend = FakeAuthBackend();
+      final service = AuthService(backend: backend);
+      var notified = 0;
+      service.addListener(() => notified++);
+      await service.signUp('a@x.com', 'secret123');
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+      expect(notified, greaterThanOrEqualTo(1));
+      backend.dispose();
+      service.dispose();
+    });
+
+    test('startPhoneSignIn delivers verification id', () async {
+      final backend = FakeAuthBackend();
+      final service = AuthService(backend: backend);
+      String? vid;
+      await service.startPhoneSignIn(
+        phone: '+237600000000',
+        onCodeSent: (v) => vid = v,
+        onError: (m) => fail('unexpected error: $m'),
+      );
+      expect(vid, isNotNull);
+      backend.dispose();
+    });
+
+    test('confirmPhoneCode signs in with valid code', () async {
+      final backend = FakeAuthBackend();
+      final service = AuthService(backend: backend);
+      final user = await service.confirmPhoneCode(
+        verificationId: 'vid-1',
+        smsCode: '123456',
+      );
+      expect(user.uid, 'uid-phone');
+      expect(service.currentUser?.uid, 'uid-phone');
+      backend.dispose();
+    });
+
+    test('blank phone or code throws ArgumentError', () async {
+      final backend = FakeAuthBackend();
+      final service = AuthService(backend: backend);
+      expect(
+        () => service.startPhoneSignIn(
+          phone: '  ',
+          onCodeSent: (_) {},
+          onError: (_) {},
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => service.confirmPhoneCode(verificationId: '', smsCode: ''),
+        throwsArgumentError,
+      );
+      backend.dispose();
+    });
+
     test('signInWithGoogle exposes the Google user', () async {
       final backend = FakeAuthBackend();
       final service = AuthService(backend: backend);

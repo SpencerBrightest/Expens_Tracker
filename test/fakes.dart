@@ -40,6 +40,25 @@ class FakeAuthBackend implements AuthBackend {
   }
 
   @override
+  Future<void> startPhoneSignIn({
+    required String phone,
+    required void Function(String verificationId) onCodeSent,
+    required void Function(String message) onError,
+  }) async {
+    onCodeSent('vid-fake');
+  }
+
+  @override
+  Future<NdohUser> confirmPhoneCode({
+    required String verificationId,
+    required String smsCode,
+  }) async {
+    _user = const NdohUser(uid: 'uid-phone', email: '');
+    _ctrl.add(_user);
+    return _user!;
+  }
+
+  @override
   Future<void> signOut() async {
     _user = null;
     _ctrl.add(null);

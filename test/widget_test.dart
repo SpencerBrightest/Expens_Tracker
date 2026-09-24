@@ -118,6 +118,32 @@ void main() {
     expect(find.text('Login & Sign Up'), findsOneWidget);
   });
 
+  testWidgets('Auth fields start empty (no demo credentials)',
+      (tester) async {
+    await tester.pumpWidget(_wrap(const AuthScreen()));
+    await tester.pumpAndSettle();
+    final fields = tester.widgetList<TextField>(find.byType(TextField));
+    expect(fields.map((f) => f.controller?.text ?? ''), everyElement(''));
+  });
+
+  testWidgets('Short password shows length error', (tester) async {
+    await tester.pumpWidget(_wrap(const AuthScreen()));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), 'a@x.com');
+    await tester.enterText(find.byType(TextField).at(1), '123');
+    await tester.pump();
+    final loginBtn = find.widgetWithText(FilledButton, 'Log in');
+    await tester.scrollUntilVisible(
+      loginBtn,
+      500,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(loginBtn);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('6 characters'), findsOneWidget);
+  });
+
   testWidgets('Auth toggles Login/Signup', (tester) async {
     await tester.pumpWidget(_wrap(const AuthScreen()));
     await tester.pumpAndSettle();
@@ -168,6 +194,59 @@ void main() {
     backend.dispose();
   });
 
+  testWidgets('Phone flow sends code then verifies to Dashboard',
+      (tester) async {
+    final backend = FakeAuthBackend();
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<ExpenseStore>(
+            create: (_) => ExpenseStore(),
+          ),
+          ChangeNotifierProvider<AuthService>(
+            create: (_) => AuthService(backend: backend),
+          ),
+          ChangeNotifierProvider<NotificationService>(
+            create: (_) =>
+                NotificationService(backend: FakeNotificationBackend()),
+          ),
+          Provider<FirestoreService?>.value(value: null),
+          Provider<SummaryService>.value(value: SummaryService()),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light(),
+          home: const AuthScreen(),
+          routes: {'/dashboard': (_) => const DashboardShell()},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final phoneMode = find.text('Use phone instead');
+    await tester.scrollUntilVisible(
+      phoneMode,
+      500,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(phoneMode);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).last, '+237600000000');
+    await tester.pump();
+    await tester.tap(find.text('Send code'));
+    await tester.pumpAndSettle();
+    expect(find.text('Enter SMS code'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField).last, '123456');
+    await tester.pump();
+    await tester.tap(find.text('Verify'));
+    await tester.pumpAndSettle();
+    expect(find.text('Top Categories'), findsOneWidget);
+    expect(backend.currentUser?.uid, 'uid-phone');
+    backend.dispose();
+  });
+
   testWidgets('Auth submit signs in and opens Dashboard', (tester) async {
     final backend = FakeAuthBackend();
     await tester.pumpWidget(
@@ -193,6 +272,9 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), 'alex.j@example.com');
+    await tester.enterText(find.byType(TextField).at(1), 'Pass123456!');
+    await tester.pump();
     final loginBtn = find.widgetWithText(FilledButton, 'Log in');
     await tester.scrollUntilVisible(
       loginBtn,

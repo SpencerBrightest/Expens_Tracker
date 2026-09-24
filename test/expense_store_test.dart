@@ -87,6 +87,18 @@ void main() {
       expect(notified, 1);
     });
 
+    test('addCategory stores and notifies, rejects duplicates', () {
+      final store = ExpenseStore();
+      var notified = 0;
+      store.addListener(() => notified++);
+
+      store.addCategory(_cat('c1', 'Food'));
+      expect(store.categories.map((c) => c.id), ['c1']);
+      expect(notified, 1);
+      expect(() => store.addCategory(_cat('c1', 'Food')),
+          throwsArgumentError);
+    });
+
     test('totalByCategory sums only that category', () {
       final store = ExpenseStore(
         categories: [_cat('c1', 'Food'), _cat('c2', 'Transport')],

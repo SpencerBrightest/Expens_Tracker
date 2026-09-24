@@ -48,12 +48,12 @@ void main() {
       expect(values, [150, 300]);
     });
 
-    testWidgets('empty store falls back to dummy breakdown', (tester) async {
+    testWidgets('empty store shows honest empty state', (tester) async {
       final store = ExpenseStore(categories: [_cat('c1')]);
       await tester.pumpWidget(_withStore(store, const SpendingPieChart()));
       await tester.pumpAndSettle();
-      final pie = tester.widget<PieChart>(find.byType(PieChart));
-      expect(pie.data.sections, isNotEmpty);
+      expect(find.byType(PieChart), findsNothing);
+      expect(find.text('No spending yet'), findsOneWidget);
     });
   });
 

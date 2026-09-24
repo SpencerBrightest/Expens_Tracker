@@ -70,11 +70,8 @@ class AnalyticsScreen extends StatelessWidget {
                       const SpendingPieChart(),
                       Builder(builder: (context) {
                         final store = context.watch<ExpenseStore>();
-                        final total = store.expenses.isEmpty
-                            ? dummyMonthTotal
-                            : store.totalSpent;
                         return Text(
-                          xafFormat.format(total),
+                          xafFormat.format(store.totalSpent),
                           style: const TextStyle(
                             fontWeight: FontWeight.w700,
                           ),

@@ -16,7 +16,9 @@ class HomeTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = context.watch<ExpenseStore>();
     final total = store.totalSpent;
-    final remaining = dummyMonthCap - total;
+    final cap = store.categories.fold(0.0, (s, c) => s + c.monthlyLimit);
+    final remaining = cap - total;
+    final progress = cap > 0 ? (total / cap).clamp(0.0, 1.0) : 0.0;
     final topCats = store.categories.take(3).toList();
     final recent = store.expenses.take(3).toList();
     return SafeArea(
@@ -100,7 +102,7 @@ class HomeTab extends StatelessWidget {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(999),
                       child: LinearProgressIndicator(
-                        value: (total / dummyMonthCap).clamp(0.0, 1.0),
+                        value: progress,
                         minHeight: 8,
                         backgroundColor: Colors.white.withValues(
                           alpha: 0.2,
@@ -179,6 +181,11 @@ class HomeTab extends StatelessWidget {
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 12),
+              if (recent.isEmpty)
+                const Text(
+                  'No expenses yet — tap + to add your first one.',
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
               ...recent.map(
                 (e) => Padding(
                   padding: const EdgeInsets.only(bottom: 10),

@@ -135,5 +135,31 @@ void main() {
         ['moto to school'],
       );
     });
+
+    testWidgets('empty categories offers inline creation on save',
+        (tester) async {
+      final store = ExpenseStore();
+      await tester.pumpWidget(
+        _withStore(store, const AddEditExpenseScreen()),
+      );
+      await tester.pumpAndSettle();
+
+      // No silent dead-end: the screen asks for a category name.
+      expect(find.text('New category'), findsOneWidget);
+      await tester.enterText(find.byType(TextField).at(0), '5000');
+      await tester.enterText(find.byType(TextField).at(1), 'Transport');
+      await tester.enterText(find.byType(TextField).last, 'moto');
+      await tester.pump();
+      await _reveal(tester, find.text('Save Expense'));
+      await tester.tap(find.text('Save Expense'));
+      await tester.pumpAndSettle();
+
+      expect(store.categories.map((c) => c.name), ['Transport']);
+      expect(store.expenses, hasLength(1));
+      expect(
+        store.expenses.first.categoryId,
+        store.categories.first.id,
+      );
+    });
   });
 }

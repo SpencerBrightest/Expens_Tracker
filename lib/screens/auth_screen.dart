@@ -18,13 +18,21 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _obscure = true;
   bool _busy = false;
   bool _googleBusy = false;
-  final _email = TextEditingController(text: 'alex.j@example.com');
-  final _password = TextEditingController(text: 'Pass123456!');
+  bool _phoneMode = false;
+  bool _phoneBusy = false;
+  bool _codeSent = false;
+  String? _verificationId;
+  final _email = TextEditingController();
+  final _password = TextEditingController();
+  final _phone = TextEditingController();
+  final _smsCode = TextEditingController();
 
   @override
   void dispose() {
     _email.dispose();
     _password.dispose();
+    _phone.dispose();
+    _smsCode.dispose();
     super.dispose();
   }
 
@@ -44,10 +52,13 @@ class _AuthScreenState extends State<AuthScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.message)),
       );
-    } catch (e) {
+    } catch (_) {
+      // Generic on purpose: never leak whether an email exists.
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Authentication failed: $e')),
+        const SnackBar(
+          content: Text('Invalid email or password. Please try again.'),
+        ),
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -60,13 +71,81 @@ class _AuthScreenState extends State<AuthScreen> {
       await context.read<AuthService>().signInWithGoogle();
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/dashboard');
-    } catch (e) {
+    } on AuthCancelledException {
+      // User dismissed the picker: stay silent.
+    } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Google sign-in failed: $e')),
+        const SnackBar(
+          content: Text('Google sign-in failed. Please try again.'),
+        ),
       );
     } finally {
       if (mounted) setState(() => _googleBusy = false);
+    }
+  }
+
+  Future<void> _sendCode() async {
+    setState(() => _phoneBusy = true);
+    try {
+      await context.read<AuthService>().startPhoneSignIn(
+            phone: _phone.text,
+            onCodeSent: (vid) {
+              if (!mounted) return;
+              setState(() {
+                _verificationId = vid;
+                _codeSent = true;
+              });
+            },
+            onError: (message) {
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(message)),
+              );
+            },
+          );
+    } on ArgumentError catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not send code. Please try again.'),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _phoneBusy = false);
+    }
+  }
+
+  Future<void> _verifyCode() async {
+    final vid = _verificationId;
+    if (vid == null) return;
+    setState(() => _phoneBusy = true);
+    try {
+      await context.read<AuthService>().confirmPhoneCode(
+            verificationId: vid,
+            smsCode: _smsCode.text,
+          );
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/dashboard');
+    } on ArgumentError catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Invalid code. Please try again.'),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _phoneBusy = false);
     }
   }
 
@@ -137,11 +216,71 @@ class _AuthScreenState extends State<AuthScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      children: [
+                if (_phoneMode)
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        children: [
+                          const Text(
+                            'Sign in with your phone number.',
+                            style:
+                                TextStyle(color: AppColors.textSecondary),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _phone,
+                            keyboardType: TextInputType.phone,
+                            decoration: const InputDecoration(
+                              labelText: 'Phone number',
+                              hintText: '+237 6 XX XX XX XX',
+                            ),
+                          ),
+                          if (_codeSent) ...[
+                            const SizedBox(height: 12),
+                            const Text(
+                              'Enter SMS code',
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: _smsCode,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: 'SMS code',
+                                hintText: '123456',
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 16),
+                          FilledButton(
+                            onPressed:
+                                _phoneBusy ? null : (_codeSent ? _verifyCode : _sendCode),
+                            child: _phoneBusy
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : Text(
+                                    _codeSent ? 'Verify' : 'Send code',
+                                  ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        children: [
                         if (!_isLogin)
                           const TextField(
                             decoration: InputDecoration(
@@ -216,6 +355,16 @@ class _AuthScreenState extends State<AuthScreen> {
                     _isLogin
                         ? "Don't have an account? Sign up"
                         : 'Already have an account? Log in',
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => setState(() {
+                    _phoneMode = !_phoneMode;
+                    _codeSent = false;
+                    _verificationId = null;
+                  }),
+                  child: Text(
+                    _phoneMode ? 'Use email instead' : 'Use phone instead',
                   ),
                 ),
               ],

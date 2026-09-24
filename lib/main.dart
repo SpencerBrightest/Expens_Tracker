@@ -3,10 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'ai/summary.dart';
-import 'data/dummy_data.dart';
 import 'firebase_options.dart';
-import 'models/category.dart';
-import 'models/expense.dart';
 import 'providers/expense_store.dart';
 import 'screens/auth_screen.dart';
 import 'screens/dashboard_shell.dart';
@@ -17,62 +14,10 @@ import 'services/notification_service.dart';
 import 'theme/app_theme.dart';
 import 'widgets/auth_gate.dart';
 
-/// Seed Category models from Stitch dummy data (cached in Provider per
-/// AGENTS perf rule — never refetched per screen).
-List<Category> seedCategories() => [
-      for (var i = 0; i < dummyCategories.length; i++)
-        Category(
-          id: 'c${i + 1}',
-          name: dummyCategories[i].name,
-          monthlyLimit: dummyCategories[i].limit,
-          colorValue: dummyCategories[i].color.toARGB32(),
-          iconCodePoint: dummyCategories[i].icon.codePoint,
-        ),
-    ];
-
-/// Local demo expenses mirroring the Stitch mock feed. Replaced by
-/// [ExpenseStore.loadFromRemote] on sign-in.
-List<Expense> seedExpenses(List<Category> categories) {
-  String catFor(String hint) {
-    for (final c in categories) {
-      if (hint.toLowerCase().contains(c.name.split(' ').first.toLowerCase()) ||
-          c.name.toLowerCase().contains(hint.split(' ').first.toLowerCase())) {
-        return c.id;
-      }
-    }
-    return categories.first.id;
-  }
-
-  final seeds = [
-    (dummyExpenses[0].title, dummyExpenses[0].amount,
-        dummyExpenses[0].category, DateTime(2024, 11, 20, 14, 15)),
-    (dummyExpenses[1].title, dummyExpenses[1].amount,
-        dummyExpenses[1].category, DateTime(2024, 11, 19, 8, 30)),
-    (dummyExpenses[2].title, dummyExpenses[2].amount,
-        dummyExpenses[2].category, DateTime(2024, 11, 18, 20, 0)),
-    (dummyExpenses[3].title, dummyExpenses[3].amount,
-        dummyExpenses[3].category, DateTime(2024, 11, 17, 9, 0)),
-  ];
-  return [
-    for (var i = 0; i < seeds.length; i++)
-      Expense(
-        id: 'e${i + 1}',
-        amount: seeds[i].$2,
-        categoryId: catFor(seeds[i].$3),
-        note: seeds[i].$1,
-        date: seeds[i].$4,
-        paymentMethod: 'Cash',
-      ),
-  ];
-}
-
-ExpenseStore seedStore() {
-  final categories = seedCategories();
-  return ExpenseStore(
-    categories: categories,
-    expenses: seedExpenses(categories),
-  );
-}
+/// Fresh users start with a clean slate: no categories, no expenses.
+/// Categories are created inline from Add/Edit Expense; cloud data loads
+/// via [ExpenseStore.loadFromRemote] on sign-in.
+ExpenseStore seedStore() => ExpenseStore();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
