@@ -1,16 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../data/dummy_data.dart';
+import '../providers/expense_store.dart';
 import '../theme/app_colors.dart';
+import '../theme/category_icons.dart';
 import '../widgets/expense_tile.dart';
 
 /// Home tab: greeting, hero balance (XAF), top categories, recent list.
+/// All figures come from [ExpenseStore].
 class HomeTab extends StatelessWidget {
   const HomeTab({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final remaining = dummyMonthCap - dummyMonthTotal;
+    final store = context.watch<ExpenseStore>();
+    final total = store.totalSpent;
+    final remaining = dummyMonthCap - total;
+    final topCats = store.categories.take(3).toList();
+    final recent = store.expenses.take(3).toList();
     return SafeArea(
       child: Center(
         child: ConstrainedBox(
@@ -81,7 +89,7 @@ class HomeTab extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      xafFormat.format(dummyMonthTotal),
+                      xafFormat.format(total),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 32,
@@ -92,7 +100,7 @@ class HomeTab extends StatelessWidget {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(999),
                       child: LinearProgressIndicator(
-                        value: dummyMonthTotal / dummyMonthCap,
+                        value: (total / dummyMonthCap).clamp(0.0, 1.0),
                         minHeight: 8,
                         backgroundColor: Colors.white.withValues(
                           alpha: 0.2,
@@ -126,9 +134,10 @@ class HomeTab extends StatelessWidget {
                   mainAxisSpacing: 10,
                   childAspectRatio: 0.9,
                 ),
-                itemCount: 3,
+                itemCount: topCats.length,
                 itemBuilder: (_, i) {
-                  final c = dummyCategories[i];
+                  final c = topCats[i];
+                  final color = Color(c.colorValue);
                   return Card(
                     margin: EdgeInsets.zero,
                     child: Padding(
@@ -136,7 +145,10 @@ class HomeTab extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(c.icon, color: c.color),
+                          Icon(
+                            categoryIcon(c.iconCodePoint),
+                            color: color,
+                          ),
                           const Spacer(),
                           Text(
                             c.name,
@@ -148,7 +160,9 @@ class HomeTab extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            xafFormat.format(c.spent),
+                            xafFormat.format(
+                              store.totalByCategory(c.id),
+                            ),
                             style: const TextStyle(
                               fontWeight: FontWeight.w700,
                             ),
@@ -165,20 +179,12 @@ class HomeTab extends StatelessWidget {
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 12),
-              ...dummyExpenses.take(3).map(
-                    (e) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: ExpenseTile(
-                        title: e.title,
-                        subtitle: '${e.category} • ${e.dateLabel}',
-                        amountLabel:
-                            '${e.isIncome ? '+' : '-'}${xafFormat.format(e.amount)}',
-                        isIncome: e.isIncome,
-                        icon: e.icon,
-                        color: e.color,
-                      ),
-                    ),
-                  ),
+              ...recent.map(
+                (e) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: ExpenseTile.forExpense(context, e),
+                ),
+              ),
             ],
           ),
         ),

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../providers/expense_store.dart';
+import '../services/firestore_service.dart';
 import '../theme/app_colors.dart';
 import 'add_edit_expense_screen.dart';
 import 'analytics_screen.dart';
@@ -18,6 +21,19 @@ class DashboardShell extends StatefulWidget {
 
 class _DashboardShellState extends State<DashboardShell> {
   int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Pull the user's cloud data once per shell mount (signed-in only).
+    Future.microtask(() {
+      if (!mounted) return;
+      final svc = context.read<FirestoreService?>();
+      if (svc != null) {
+        context.read<ExpenseStore>().loadFromRemote(svc).ignore();
+      }
+    });
+  }
 
   static const _tabs = [
     HomeTab(),

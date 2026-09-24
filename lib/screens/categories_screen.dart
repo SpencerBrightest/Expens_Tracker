@@ -1,13 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../data/dummy_data.dart';
+import '../providers/expense_store.dart';
 import '../theme/app_colors.dart';
+import '../theme/category_icons.dart';
 
+/// Category budgets from [ExpenseStore]; spent is computed live via
+/// [ExpenseStore.totalByCategory].
 class CategoriesScreen extends StatelessWidget {
   const CategoriesScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final store = context.watch<ExpenseStore>();
+    final categories = store.categories;
+    final cap = categories.fold(0.0, (s, c) => s + c.monthlyLimit);
+    final spent = store.totalSpent;
     return SafeArea(
       child: Center(
         child: ConstrainedBox(
@@ -41,7 +50,7 @@ class CategoriesScreen extends StatelessWidget {
                       style: TextStyle(color: Colors.white70, fontSize: 12),
                     ),
                     Text(
-                      xafFormat.format(4150),
+                      xafFormat.format(cap),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 32,
@@ -49,15 +58,20 @@ class CategoriesScreen extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '${xafFormat.format(3140)} spent this month',
+                      '${xafFormat.format(spent)} spent this month',
                       style: const TextStyle(color: Colors.white70),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 12),
-              ...dummyCategories.map(
-                (c) => Card(
+              ...categories.map((c) {
+                final cSpent = store.totalByCategory(c.id);
+                final pct = c.monthlyLimit <= 0
+                    ? 0.0
+                    : (cSpent / c.monthlyLimit).clamp(0.0, 1.0);
+                final color = Color(c.colorValue);
+                return Card(
                   margin: const EdgeInsets.only(bottom: 10),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
@@ -69,10 +83,13 @@ class CategoriesScreen extends StatelessWidget {
                               width: 44,
                               height: 44,
                               decoration: BoxDecoration(
-                                color: c.color.withValues(alpha: 0.12),
+                                color: color.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: Icon(c.icon, color: c.color),
+                              child: Icon(
+                                categoryIcon(c.iconCodePoint),
+                                color: color,
+                              ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -87,7 +104,7 @@ class CategoriesScreen extends StatelessWidget {
                                     ),
                                   ),
                                   Text(
-                                    'Limit: ${xafFormat.format(c.limit)} / mo',
+                                    'Limit: ${xafFormat.format(c.monthlyLimit)} / mo',
                                     style: const TextStyle(
                                       color: AppColors.textSecondary,
                                       fontSize: 12,
@@ -97,7 +114,7 @@ class CategoriesScreen extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              xafFormat.format(c.spent),
+                              xafFormat.format(cSpent),
                               style: const TextStyle(
                                 fontWeight: FontWeight.w700,
                               ),
@@ -108,18 +125,18 @@ class CategoriesScreen extends StatelessWidget {
                         ClipRRect(
                           borderRadius: BorderRadius.circular(999),
                           child: LinearProgressIndicator(
-                            value: c.spent / c.limit,
+                            value: pct,
                             minHeight: 8,
                             backgroundColor: AppColors.surfaceContainer,
                             valueColor:
-                                AlwaysStoppedAnimation(c.color),
+                                AlwaysStoppedAnimation(color),
                           ),
                         ),
                       ],
                     ),
                   ),
-                ),
-              ),
+                );
+              }),
             ],
           ),
         ),

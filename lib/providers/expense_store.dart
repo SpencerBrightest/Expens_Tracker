@@ -62,6 +62,22 @@ class ExpenseStore extends ChangeNotifier {
     }
   }
 
+  /// Category for display; falls back to an inline "Other" instead of
+  /// throwing when an expense references a missing category.
+  Category categoryFor(Expense expense) {
+    try {
+      return categoryById(expense.categoryId);
+    } on ArgumentError {
+      return Category(
+        id: 'unknown',
+        name: 'Other',
+        monthlyLimit: 0,
+        colorValue: 0xFF8A92A6,
+        iconCodePoint: 0xe318,
+      );
+    }
+  }
+
   void _sortExpenses() {
     _expenses.sort((a, b) {
       final byDate = b.date.compareTo(a.date);

@@ -5,6 +5,7 @@ import 'package:expense_tracker/screens/dashboard_shell.dart';
 import 'package:expense_tracker/screens/homepage_screen.dart';
 import 'package:expense_tracker/screens/splash_screen.dart';
 import 'package:expense_tracker/services/auth_service.dart';
+import 'package:expense_tracker/services/firestore_service.dart';
 import 'package:expense_tracker/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -25,6 +26,7 @@ Widget _wrap(Widget child, {FakeAuthBackend? backend}) {
         // Owned fakes leak their broadcast controller; tests are
         // short-lived so this is acceptable (matches other suites).
       ),
+      Provider<FirestoreService?>.value(value: null),
     ],
     child: MaterialApp(theme: AppTheme.light(), home: child),
   );
@@ -88,6 +90,7 @@ void main() {
           ChangeNotifierProvider<AuthService>(
             create: (_) => AuthService(backend: FakeAuthBackend()),
           ),
+          Provider<FirestoreService?>.value(value: null),
         ],
         child: MaterialApp(
           theme: AppTheme.light(),
@@ -123,6 +126,7 @@ void main() {
           ChangeNotifierProvider<AuthService>(
             create: (_) => AuthService(backend: backend),
           ),
+          Provider<FirestoreService?>.value(value: null),
         ],
         child: MaterialApp(
           theme: AppTheme.light(),

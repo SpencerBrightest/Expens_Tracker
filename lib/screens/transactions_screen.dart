@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../data/dummy_data.dart';
+import '../providers/expense_store.dart';
 import '../theme/app_colors.dart';
 import '../widgets/expense_tile.dart';
 
+/// History list, newest-first from [ExpenseStore].
+/// (Service-level `limit()/startAfter()` pagination exists in
+/// FirestoreService; infinite-scroll UI is a fast follow.)
 class TransactionsScreen extends StatelessWidget {
   const TransactionsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final store = context.watch<ExpenseStore>();
+    final expenses = store.expenses;
     return SafeArea(
       child: Center(
         child: ConstrainedBox(
@@ -45,23 +52,17 @@ class TransactionsScreen extends StatelessWidget {
                       color: AppColors.primary,
                     ),
                   ),
-                  title: Text(xafFormat.format(dummyMonthTotal)),
-                  subtitle: const Text('spent • 42 transactions'),
+                  title: Text(xafFormat.format(store.totalSpent)),
+                  subtitle: Text(
+                    'spent • ${expenses.length} transactions',
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
-              ...dummyExpenses.map(
+              ...expenses.map(
                 (e) => Padding(
                   padding: const EdgeInsets.only(bottom: 10),
-                  child: ExpenseTile(
-                    title: e.title,
-                    subtitle: '${e.category} • ${e.dateLabel}',
-                    amountLabel:
-                        '${e.isIncome ? '+' : '-'}${xafFormat.format(e.amount)}',
-                    isIncome: e.isIncome,
-                    icon: e.icon,
-                    color: e.color,
-                  ),
+                  child: ExpenseTile.forExpense(context, e),
                 ),
               ),
             ],

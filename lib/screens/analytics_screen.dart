@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../data/dummy_data.dart';
+import '../providers/expense_store.dart';
 import '../theme/app_colors.dart';
 import '../widgets/spending_pie_chart.dart';
 import '../widgets/spending_trend_chart.dart';
@@ -64,12 +66,18 @@ class AnalyticsScreen extends StatelessWidget {
                         ),
                       ),
                       const SpendingPieChart(),
-                      Text(
-                        xafFormat.format(dummyMonthTotal),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
+                      Builder(builder: (context) {
+                        final store = context.watch<ExpenseStore>();
+                        final total = store.expenses.isEmpty
+                            ? dummyMonthTotal
+                            : store.totalSpent;
+                        return Text(
+                          xafFormat.format(total),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        );
+                      }),
                     ],
                   ),
                 ),
