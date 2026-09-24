@@ -1,4 +1,5 @@
 import 'package:expense_tracker/main.dart';
+import 'package:expense_tracker/providers/expense_store.dart';
 import 'package:expense_tracker/screens/auth_screen.dart';
 import 'package:expense_tracker/screens/dashboard_shell.dart';
 import 'package:expense_tracker/screens/homepage_screen.dart';
@@ -6,6 +7,7 @@ import 'package:expense_tracker/screens/splash_screen.dart';
 import 'package:expense_tracker/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 
 Widget _wrap(Widget child) {
   return MaterialApp(theme: AppTheme.light(), home: child);
@@ -77,7 +79,12 @@ void main() {
   });
 
   testWidgets('Dashboard shell has 5 tabs + FAB', (tester) async {
-    await tester.pumpWidget(_wrap(const DashboardShell()));
+    await tester.pumpWidget(
+      ChangeNotifierProvider<ExpenseStore>(
+        create: (_) => ExpenseStore(),
+        child: _wrap(const DashboardShell()),
+      ),
+    );
     await tester.pumpAndSettle();
     expect(find.text('Home'), findsOneWidget);
     expect(find.text('History'), findsOneWidget);

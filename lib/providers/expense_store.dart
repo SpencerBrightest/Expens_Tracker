@@ -26,6 +26,33 @@ class ExpenseStore extends ChangeNotifier {
       .where((e) => e.categoryId == categoryId)
       .fold(0, (sum, e) => sum + e.amount);
 
+  /// Per-category totals for the donut chart. Skips zero-total categories
+  /// so pie sections match visible spending.
+  Map<String, double> totalsByCategory() {
+    final totals = <String, double>{};
+    for (final e in _expenses) {
+      totals[e.categoryId] = (totals[e.categoryId] ?? 0) + e.amount;
+    }
+    totals.removeWhere((_, v) => v <= 0);
+    return totals;
+  }
+
+  /// Monthly buckets oldest-first for the trend chart. Buckets by
+  /// [Expense.date] year/month over the [months] ending at [reference].
+  List<double> monthlyTotals({int months = 6, DateTime? reference}) {
+    assert(months > 0, 'months must be > 0');
+    final ref = reference ?? DateTime.now();
+    final totals = List<double>.filled(months, 0);
+    for (final e in _expenses) {
+      final monthDiff =
+          (ref.year - e.date.year) * 12 + (ref.month - e.date.month);
+      if (monthDiff >= 0 && monthDiff < months) {
+        totals[months - 1 - monthDiff] += e.amount;
+      }
+    }
+    return totals;
+  }
+
   Category categoryById(String id) {
     try {
       return _categories.firstWhere((c) => c.id == id);
