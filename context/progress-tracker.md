@@ -6,6 +6,10 @@
 - [x] Phase 4: charts wired to state (TDD)
 - [x] Phase 5: AuthService + AuthGate + flutterfire configure
       (expense-tracker-ca5d2, Email/Password; Firebase init in main)
-- [ ] Phase 6: Firestore per-user reads/writes + pagination + optimistic save
-- [ ] Phase 7: notifications
-- [ ] Phase 8: AI touches (chip, summary, insight) + Gemini key
+- [x] Phase 6: FirestoreService scoped + pagination, store sync
+      (optimistic + rollback), screens read store, AddEdit persists
+- [x] Phase 7: NotificationService (daily 8pm reminder, 80/100% budget
+      alerts) + Settings toggles + POST_NOTIFICATIONS manifest
+- [x] Phase 8: AI touches — suggestion chip (keyword+debounce), summary
+      (template default, Gemini when long, async patch), insight card.
+      Key via --dart-define=GEMINI_API_KEY (never committed).
