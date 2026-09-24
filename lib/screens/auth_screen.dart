@@ -17,6 +17,7 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _isLogin = true;
   bool _obscure = true;
   bool _busy = false;
+  bool _googleBusy = false;
   final _email = TextEditingController(text: 'alex.j@example.com');
   final _password = TextEditingController(text: 'Pass123456!');
 
@@ -50,6 +51,22 @@ class _AuthScreenState extends State<AuthScreen> {
       );
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() => _googleBusy = true);
+    try {
+      await context.read<AuthService>().signInWithGoogle();
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/dashboard');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Google sign-in failed: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _googleBusy = false);
     }
   }
 
@@ -174,6 +191,20 @@ class _AuthScreenState extends State<AuthScreen> {
                               : Text(
                                   _isLogin ? 'Log in' : 'Create account',
                                 ),
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton(
+                          onPressed:
+                              (_busy || _googleBusy) ? null : _signInWithGoogle,
+                          child: _googleBusy
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Text('Continue with Google'),
                         ),
                       ],
                     ),

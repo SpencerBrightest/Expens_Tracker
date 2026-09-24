@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 /// Firebase-light user. Screens depend on this, never on firebase_auth.
 @immutable
@@ -18,23 +19,52 @@ class NdohUser {
 }
 
 /// Backend contract. Production uses [FirebaseAuthBackend]; tests use a
-/// fake. This is the ONLY file that may import firebase_auth.
+/// fake. This is the ONLY file that may import firebase_auth or
+/// google_sign_in.
 abstract class AuthBackend {
   Stream<NdohUser?> authStateChanges();
   NdohUser? get currentUser;
   Future<NdohUser> signIn(String email, String password);
   Future<NdohUser> signUp(String email, String password);
+  Future<NdohUser> signInWithGoogle();
   Future<void> signOut();
 }
 
 NdohUser _toUser(User u) =>
     NdohUser(uid: u.uid, email: u.email ?? '');
 
+/// Thin wrapper over the GoogleSignIn singleton (initialize-once rule).
+/// Injectable for tests via [FirebaseAuthBackend].
+class GoogleSignInFlow {
+  GoogleSignInFlow();
+
+  bool _ready = false;
+
+  Future<GoogleSignInAccount> call() async {
+    if (!_ready) {
+      await GoogleSignIn.instance.initialize();
+      _ready = true;
+    }
+    return GoogleSignIn.instance.authenticate();
+  }
+
+  Future<void> signOut() async {
+    if (!_ready) return;
+    try {
+      await GoogleSignIn.instance.signOut();
+    } catch (_) {
+      // Best effort: Firebase sign-out already happened.
+    }
+  }
+}
+
 class FirebaseAuthBackend implements AuthBackend {
-  FirebaseAuthBackend([FirebaseAuth? auth])
-      : _auth = auth ?? FirebaseAuth.instance;
+  FirebaseAuthBackend([FirebaseAuth? auth, GoogleSignInFlow? googleFlow])
+      : _auth = auth ?? FirebaseAuth.instance,
+        _googleFlow = googleFlow ?? GoogleSignInFlow();
 
   final FirebaseAuth _auth;
+  final GoogleSignInFlow _googleFlow;
 
   @override
   Stream<NdohUser?> authStateChanges() =>
@@ -65,7 +95,23 @@ class FirebaseAuthBackend implements AuthBackend {
   }
 
   @override
-  Future<void> signOut() => _auth.signOut();
+  Future<NdohUser> signInWithGoogle() async {
+    final account = await _googleFlow();
+    final idToken = account.authentication.idToken;
+    if (idToken == null) {
+      throw StateError('Google sign-in returned no ID token');
+    }
+    final cred = await _auth.signInWithCredential(
+      GoogleAuthProvider.credential(idToken: idToken),
+    );
+    return _toUser(cred.user!);
+  }
+
+  @override
+  Future<void> signOut() async {
+    await _auth.signOut();
+    await _googleFlow.signOut();
+  }
 }
 
 /// Entry point for screens. Validates input, delegates to the backend.
@@ -97,6 +143,12 @@ class AuthService extends ChangeNotifier {
   Future<NdohUser> signUp(String email, String password) async {
     _check(email, password);
     final user = await _backend.signUp(email.trim(), password);
+    notifyListeners();
+    return user;
+  }
+
+  Future<NdohUser> signInWithGoogle() async {
+    final user = await _backend.signInWithGoogle();
     notifyListeners();
     return user;
   }

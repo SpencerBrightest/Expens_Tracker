@@ -63,5 +63,14 @@ void main() {
       expect(() => service.signUp('', 'secret123'), throwsArgumentError);
       backend.dispose();
     });
+
+    test('signInWithGoogle exposes the Google user', () async {
+      final backend = FakeAuthBackend();
+      final service = AuthService(backend: backend);
+      final user = await service.signInWithGoogle();
+      expect(user.uid, 'uid-google');
+      expect(service.currentUser?.email, 'g@x.com');
+      backend.dispose();
+    });
   });
 }

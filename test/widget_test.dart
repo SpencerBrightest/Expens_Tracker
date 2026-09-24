@@ -1,3 +1,4 @@
+import 'package:expense_tracker/ai/summary.dart';
 import 'package:expense_tracker/main.dart';
 import 'package:expense_tracker/providers/expense_store.dart';
 import 'package:expense_tracker/screens/auth_screen.dart';
@@ -124,6 +125,47 @@ void main() {
     await tester.tap(find.text('Sign up').first);
     await tester.pumpAndSettle();
     expect(find.text('Create your account'), findsOneWidget);
+  });
+
+  testWidgets('Continue with Google signs in and opens Dashboard',
+      (tester) async {
+    final backend = FakeAuthBackend();
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<ExpenseStore>(
+            create: (_) => ExpenseStore(),
+          ),
+          ChangeNotifierProvider<AuthService>(
+            create: (_) => AuthService(backend: backend),
+          ),
+          ChangeNotifierProvider<NotificationService>(
+            create: (_) =>
+                NotificationService(backend: FakeNotificationBackend()),
+          ),
+          Provider<FirestoreService?>.value(value: null),
+          Provider<SummaryService>.value(value: SummaryService()),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light(),
+          home: const AuthScreen(),
+          routes: {'/dashboard': (_) => const DashboardShell()},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final googleBtn = find.text('Continue with Google');
+    await tester.scrollUntilVisible(
+      googleBtn,
+      500,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(googleBtn);
+    await tester.pumpAndSettle();
+    expect(find.text('Top Categories'), findsOneWidget);
+    expect(backend.currentUser?.uid, 'uid-google');
+    backend.dispose();
   });
 
   testWidgets('Auth submit signs in and opens Dashboard', (tester) async {

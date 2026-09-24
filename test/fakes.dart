@@ -33,6 +33,13 @@ class FakeAuthBackend implements AuthBackend {
   }
 
   @override
+  Future<NdohUser> signInWithGoogle() async {
+    _user = const NdohUser(uid: 'uid-google', email: 'g@x.com');
+    _ctrl.add(_user);
+    return _user!;
+  }
+
+  @override
   Future<void> signOut() async {
     _user = null;
     _ctrl.add(null);
