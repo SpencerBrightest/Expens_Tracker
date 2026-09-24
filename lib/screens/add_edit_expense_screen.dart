@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../data/dummy_data.dart';
 import '../models/expense.dart';
+import '../ai/category_suggest.dart';
 import '../providers/expense_store.dart';
 import '../services/firestore_service.dart';
 import '../services/notification_service.dart';
@@ -25,6 +28,8 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
   late final TextEditingController _amount;
   late final TextEditingController _note;
   String? _categoryId;
+  String? _suggestedId;
+  Timer? _debounce;
   bool _busy = false;
 
   @override
@@ -35,10 +40,26 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
     );
     _note = TextEditingController(text: widget.expense?.note ?? '');
     _categoryId = widget.expense?.categoryId;
+    _note.addListener(_onNoteChanged);
+  }
+
+  /// Debounced (300ms) keyword suggestion — cheap, never a network call.
+  void _onNoteChanged() {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      final id = suggestCategoryId(
+        _note.text,
+        context.read<ExpenseStore>().categories,
+      );
+      setState(() => _suggestedId = id);
+    });
   }
 
   @override
   void dispose() {
+    _debounce?.cancel();
+    _note.removeListener(_onNoteChanged);
     _amount.dispose();
     _note.dispose();
     super.dispose();
@@ -176,6 +197,33 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
                   hintText: 'e.g. moto to school',
                 ),
               ),
+              Builder(builder: (context) {
+                final suggestedId = _suggestedId;
+                final currentId = _categoryId ??
+                    (categories.isEmpty ? null : categories.first.id);
+                if (suggestedId == null || suggestedId == currentId) {
+                  return const SizedBox.shrink();
+                }
+                String? name;
+                for (final c in categories) {
+                  if (c.id == suggestedId) {
+                    name = c.name;
+                    break;
+                  }
+                }
+                if (name == null) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: ActionChip(
+                    avatar: const Icon(Icons.auto_awesome_outlined, size: 18),
+                    label: Text('Try $name'),
+                    onPressed: () => setState(() {
+                      _categoryId = suggestedId;
+                      _suggestedId = null;
+                    }),
+                  ),
+                );
+              }),
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: _busy ? null : _save,
