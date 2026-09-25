@@ -7,17 +7,43 @@ import 'package:google_sign_in/google_sign_in.dart';
 /// Firebase-light user. Screens depend on this, never on firebase_auth.
 @immutable
 class NdohUser {
-  const NdohUser({required this.uid, required this.email});
+  const NdohUser({required this.uid, required this.email, this.displayName});
 
   final String uid;
   final String email;
+  final String? displayName;
+
+  /// First name for greetings ("Hey Alex").
+  /// Prefers displayName's first token; falls back to the email prefix
+  /// (`alex.j@x.com` -> `Alex`); falls back to "Friend" (e.g. phone users).
+  String get firstName {
+    final raw = displayName?.trim();
+    if (raw != null && raw.isNotEmpty) {
+      return raw.split(RegExp(r'\s+')).first;
+    }
+    final prefix = email.split('@').first.trim();
+    if (prefix.isEmpty) return 'Friend';
+    final first = prefix.split(RegExp(r'[._\-+]+')).firstWhere(
+          (p) => p.isNotEmpty,
+          orElse: () => prefix,
+        );
+    if (first.isEmpty) return 'Friend';
+    return first[0].toUpperCase() + first.substring(1);
+  }
+
+  /// Full display string for profile rows. Falls back to [firstName] so
+  /// Google/email users always see their own name, never a placeholder.
+  String get greetingName => firstName;
 
   @override
   bool operator ==(Object other) =>
-      other is NdohUser && other.uid == uid && other.email == email;
+      other is NdohUser &&
+      other.uid == uid &&
+      other.email == email &&
+      other.displayName == displayName;
 
   @override
-  int get hashCode => Object.hash(uid, email);
+  int get hashCode => Object.hash(uid, email, displayName);
 }
 
 /// Thrown when the user backs out of an interactive flow (e.g. dismisses
@@ -33,7 +59,7 @@ abstract class AuthBackend {
   Stream<NdohUser?> authStateChanges();
   NdohUser? get currentUser;
   Future<NdohUser> signIn(String email, String password);
-  Future<NdohUser> signUp(String email, String password);
+  Future<NdohUser> signUp(String email, String password, {String? displayName});
   Future<NdohUser> signInWithGoogle();
   Future<void> startPhoneSignIn({
     required String phone,
@@ -47,8 +73,13 @@ abstract class AuthBackend {
   Future<void> signOut();
 }
 
-NdohUser _toUser(User u) =>
-    NdohUser(uid: u.uid, email: u.email ?? '');
+NdohUser _toUser(User u) => NdohUser(
+      uid: u.uid,
+      email: u.email ?? '',
+      displayName: u.displayName?.trim().isEmpty ?? true
+          ? null
+          : u.displayName?.trim(),
+    );
 
 /// Thin wrapper over the GoogleSignIn singleton (initialize-once rule).
 /// Injectable for tests via [FirebaseAuthBackend].
@@ -103,11 +134,22 @@ class FirebaseAuthBackend implements AuthBackend {
   }
 
   @override
-  Future<NdohUser> signUp(String email, String password) async {
+  Future<NdohUser> signUp(
+    String email,
+    String password, {
+    String? displayName,
+  }) async {
     final cred = await _auth.createUserWithEmailAndPassword(
       email: email,
       password: password,
     );
+    final name = displayName?.trim();
+    if (name != null && name.isNotEmpty) {
+      await cred.user!.updateDisplayName(name);
+      await cred.user!.reload();
+      final fresh = _auth.currentUser;
+      if (fresh != null) return _toUser(fresh);
+    }
     return _toUser(cred.user!);
   }
 
@@ -228,9 +270,19 @@ class AuthService extends ChangeNotifier {
     return user;
   }
 
-  Future<NdohUser> signUp(String email, String password) async {
+  Future<NdohUser> signUp(
+    String email,
+    String password, {
+    String? displayName,
+  }) async {
     _check(email, password);
-    final user = await _backend.signUp(email.trim(), password);
+    final user = await _backend.signUp(
+      email.trim(),
+      password,
+      displayName: displayName?.trim().isEmpty ?? true
+          ? null
+          : displayName?.trim(),
+    );
     notifyListeners();
     return user;
   }

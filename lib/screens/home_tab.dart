@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../data/dummy_data.dart';
 import '../providers/expense_store.dart';
+import '../services/auth_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/category_icons.dart';
 import '../widgets/expense_tile.dart';
@@ -15,6 +17,18 @@ class HomeTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = context.watch<ExpenseStore>();
+    // AuthService is present in production (DashboardShell) but may be
+    // absent in isolated widget tests — fall back to "Friend" then.
+    NdohUser? user;
+    try {
+      user = context.watch<AuthService>().currentUser;
+    } catch (_) {
+      user = null;
+    }
+    final firstName = user?.firstName ?? 'Friend';
+    final initial =
+        firstName.isEmpty ? 'N' : firstName[0].toUpperCase();
+    final monthLabel = DateFormat('MMMM y').format(DateTime.now());
     final total = store.totalSpent;
     final cap = store.categories.fold(0.0, (s, c) => s + c.monthlyLimit);
     final remaining = cap - total;
@@ -38,9 +52,9 @@ class HomeTab extends StatelessWidget {
                       color: AppColors.primary.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Text(
-                      'A',
-                      style: TextStyle(
+                    child: Text(
+                      initial,
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
                         color: AppColors.primary,
@@ -48,19 +62,19 @@ class HomeTab extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Column(
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Hello, Alex 👋',
-                        style: TextStyle(
+                        'Hey $firstName 👋',
+                        style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       Text(
-                        'November 2024',
-                        style: TextStyle(
+                        monthLabel,
+                        style: const TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 12,
                         ),

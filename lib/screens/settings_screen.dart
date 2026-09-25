@@ -12,6 +12,18 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final notifications = context.watch<NotificationService>();
+    NdohUser? user;
+    try {
+      user = context.watch<AuthService>().currentUser;
+    } catch (_) {
+      user = null;
+    }
+    final displayName = user?.displayName?.trim().isEmpty ?? true
+        ? user?.firstName ?? 'Friend'
+        : user!.displayName!.trim();
+    final email = (user?.email ?? '').isEmpty
+        ? 'Signed in'
+        : user!.email;
     return SafeArea(
       child: Center(
         child: ConstrainedBox(
@@ -33,8 +45,8 @@ class SettingsScreen extends StatelessWidget {
                       color: AppColors.primary,
                     ),
                   ),
-                  title: const Text('Alex Johnson'),
-                  subtitle: const Text('alex.j@example.com'),
+                  title: Text(displayName),
+                  subtitle: Text(email),
                   trailing: const Icon(Icons.edit_outlined, size: 20),
                 ),
               ),

@@ -22,6 +22,7 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _phoneBusy = false;
   bool _codeSent = false;
   String? _verificationId;
+  final _name = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
   final _phone = TextEditingController();
@@ -29,6 +30,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
   @override
   void dispose() {
+    _name.dispose();
     _email.dispose();
     _password.dispose();
     _phone.dispose();
@@ -43,7 +45,11 @@ class _AuthScreenState extends State<AuthScreen> {
       if (_isLogin) {
         await auth.signIn(_email.text, _password.text);
       } else {
-        await auth.signUp(_email.text, _password.text);
+        await auth.signUp(
+          _email.text,
+          _password.text,
+          displayName: _name.text,
+        );
       }
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/dashboard');
@@ -282,8 +288,11 @@ class _AuthScreenState extends State<AuthScreen> {
                       child: Column(
                         children: [
                         if (!_isLogin)
-                          const TextField(
-                            decoration: InputDecoration(
+                          TextField(
+                            controller: _name,
+                            textCapitalization:
+                                TextCapitalization.words,
+                            decoration: const InputDecoration(
                               labelText: 'Full Name',
                               hintText: 'Alex Johnson',
                             ),
