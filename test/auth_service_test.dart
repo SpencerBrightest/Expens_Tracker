@@ -135,13 +135,35 @@ void main() {
       );
       backend.dispose();
     });
-
     test('signInWithGoogle exposes the Google user', () async {
       final backend = FakeAuthBackend();
       final service = AuthService(backend: backend);
       final user = await service.signInWithGoogle();
       expect(user.uid, 'uid-google');
       expect(service.currentUser?.email, 'g@x.com');
+      backend.dispose();
+    });
+
+    test('displayNameFromEmail derives a friendly name', () {
+      expect(
+        AuthService.displayNameFromEmail('spencer.bright@x.com'),
+        'Spencer Bright',
+      );
+      expect(
+        AuthService.displayNameFromEmail('spenzerbrightest@gmail.com'),
+        'Spenzerbrightest',
+      );
+      expect(AuthService.displayNameFromEmail('  '), 'Friend');
+    });
+
+    test('signUp with blank name falls back to the email-derived name',
+        () async {
+      final backend = FakeAuthBackend();
+      final service = AuthService(backend: backend);
+      final user = await service.signUp('spencer.bright@x.com', 'secret123',
+          displayName: '  ');
+      expect(user.displayName, 'Spencer Bright');
+      expect(user.firstName, 'Spencer');
       backend.dispose();
     });
   });

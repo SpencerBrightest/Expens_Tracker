@@ -12,7 +12,7 @@ import 'services/auth_service.dart';
 import 'services/firestore_service.dart';
 import 'services/notification_service.dart';
 import 'theme/app_theme.dart';
-import 'widgets/auth_gate.dart';
+import 'widgets/splash_gate.dart';
 
 /// Fresh users start with a clean slate: no categories, no expenses.
 /// Categories are created inline from Add/Edit Expense; cloud data loads
@@ -38,8 +38,9 @@ void main() async {
   );
 }
 
-/// Ndoh root. Navigation is auth-gated via [AuthGate], which listens to
-/// [AuthService.authStateChanges] — never a one-time check.
+/// Ndoh root. Cold start shows [SplashGate] (custom splash ~2s), which then
+/// hands off to [AuthGate] listening to [AuthService.authStateChanges] —
+/// never a one-time check.
 /// [FirestoreService] is exposed per signed-in user (null when signed out).
 class NdohApp extends StatelessWidget {
   const NdohApp(
@@ -79,7 +80,7 @@ class NdohApp extends StatelessWidget {
         title: 'Ndoh',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light(),
-        home: const AuthGate(),
+        home: const SplashGate(),
         routes: {
           '/home': (_) => const HomepageScreen(),
           '/auth': (_) => const AuthScreen(),

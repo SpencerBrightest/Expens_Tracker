@@ -73,6 +73,8 @@ void main() {
       ),
     );
     expect(find.text('Ndoh'), findsOneWidget);
+    // SplashGate holds the custom splash ~2s before handing off to AuthGate.
+    await tester.pump(const Duration(seconds: 2));
     await tester.pumpAndSettle();
     await _reveal(tester, find.text('Get started'));
     expect(find.text('Get started'), findsOneWidget);

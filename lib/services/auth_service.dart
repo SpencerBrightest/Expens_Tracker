@@ -13,9 +13,9 @@ class NdohUser {
   final String email;
   final String? displayName;
 
-  /// First name for greetings ("Hey Alex").
+  /// First name for greetings ("Hey Spencer").
   /// Prefers displayName's first token; falls back to the email prefix
-  /// (`alex.j@x.com` -> `Alex`); falls back to "Friend" (e.g. phone users).
+  /// (`spencer.bright@x.com` -> `Spencer`); falls back to "Friend" (e.g. phone users).
   String get firstName {
     final raw = displayName?.trim();
     if (raw != null && raw.isNotEmpty) {
@@ -251,6 +251,23 @@ class AuthService extends ChangeNotifier {
   Stream<NdohUser?> get authStateChanges => _backend.authStateChanges();
   NdohUser? get currentUser => _backend.currentUser;
 
+  /// Friendly name derived from the email address, so the greeting is
+  /// always the signed-in person's own name ("Hey Spencer") and never a
+  /// hardcoded placeholder. `spencer.bright@x.com` -> `Spencer Bright`;
+  /// `spenzerbrightest@x.com` -> `Spenzerbrightest`.
+  static String displayNameFromEmail(String email) {
+    final prefix = email.trim().split('@').first.trim();
+    if (prefix.isEmpty) return 'Friend';
+    final parts = prefix
+        .split(RegExp(r'[._\-+]+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
+    if (parts.isEmpty) return 'Friend';
+    return parts
+        .map((p) => p[0].toUpperCase() + p.substring(1))
+        .join(' ');
+  }
+
   static void _check(String email, String password) {
     if (email.trim().isEmpty) {
       throw ArgumentError('Email must not be blank');
@@ -276,12 +293,16 @@ class AuthService extends ChangeNotifier {
     String? displayName,
   }) async {
     _check(email, password);
+    // Name defaults to the email-derived name so "Hey <Name>" always
+    // reflects the authenticated user, even when the name field is left
+    // blank on the signup form.
+    final typed = displayName?.trim() ?? '';
+    final resolved =
+        typed.isEmpty ? displayNameFromEmail(email) : typed;
     final user = await _backend.signUp(
       email.trim(),
       password,
-      displayName: displayName?.trim().isEmpty ?? true
-          ? null
-          : displayName?.trim(),
+      displayName: resolved,
     );
     notifyListeners();
     return user;

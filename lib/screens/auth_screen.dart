@@ -294,7 +294,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                 TextCapitalization.words,
                             decoration: const InputDecoration(
                               labelText: 'Full Name',
-                              hintText: 'Alex Johnson',
+                              hintText: 'e.g. Spencer Bright',
                             ),
                           ),
                         if (!_isLogin) const SizedBox(height: 12),
@@ -303,7 +303,7 @@ class _AuthScreenState extends State<AuthScreen> {
                           keyboardType: TextInputType.emailAddress,
                           decoration: const InputDecoration(
                             labelText: 'Email Address',
-                            hintText: 'alex.j@example.com',
+                            hintText: 'e.g. spenzerbrightest@gmail.com',
                           ),
                         ),
                         const SizedBox(height: 12),
