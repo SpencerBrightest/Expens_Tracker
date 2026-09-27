@@ -11,12 +11,14 @@ Category _cat(String id, String name) => Category(
       iconCodePoint: 0xe318,
     );
 
-Expense _exp(String id, String catId, double amount) => Expense(
+Expense _exp(String id, String catId, double amount, [DateTime? createdAt]) =>
+    Expense(
       id: id,
       amount: amount,
       categoryId: catId,
       note: 'note $id',
       date: DateTime(2024, 11, 20),
+      createdAt: createdAt,
     );
 
 void main() {
@@ -28,13 +30,33 @@ void main() {
       expect(store.totalSpent, 0);
     });
 
+    test('shares split the total with no divide-by-zero', () {
+      final empty = ExpenseStore(categories: [_cat('c1', 'Food')]);
+      expect(empty.shareOfTotal('c1'), 0);
+      expect(empty.sharesByCategory(), isEmpty);
+
+      final store = ExpenseStore(
+        categories: [_cat('c1', 'Food'), _cat('c2', 'Rides')],
+      );
+      store.addExpense(_exp('e1', 'c1', 150));
+      store.addExpense(_exp('e2', 'c2', 300));
+      expect(store.totalSpent, 450);
+      expect(store.shareOfTotal('c1'), closeTo(150 / 450, 1e-9));
+      expect(store.shareOfTotal('c2'), closeTo(300 / 450, 1e-9));
+      final shares = store.sharesByCategory();
+      expect(
+        shares.values.fold(0.0, (s, v) => s + v),
+        closeTo(1.0, 1e-9),
+      );
+    });
+
     test('addExpense inserts newest-first and notifies', () {
       final store = ExpenseStore(categories: [_cat('c1', 'Food')]);
       var notified = 0;
       store.addListener(() => notified++);
 
-      store.addExpense(_exp('e1', 'c1', 5000));
-      store.addExpense(_exp('e2', 'c1', 2500));
+      store.addExpense(_exp('e1', 'c1', 5000, DateTime(2024, 11, 20, 10)));
+      store.addExpense(_exp('e2', 'c1', 2500, DateTime(2024, 11, 20, 11)));
 
       expect(store.expenses.map((e) => e.id), ['e2', 'e1']);
       expect(store.totalSpent, 7500);

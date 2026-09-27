@@ -38,6 +38,27 @@ class ExpenseStore extends ChangeNotifier {
     return totals;
   }
 
+  /// Share of total expenses for one category (0..1).
+  /// Spreadsheet twin: `SUMIF(total for category) / SUM(all)`.
+  /// Returns 0 when there is no spending (no divide-by-zero).
+  double shareOfTotal(String categoryId) {
+    final total = totalSpent;
+    if (total <= 0) return 0;
+    return totalByCategory(categoryId) / total;
+  }
+
+  /// Share of total expenses per category (0..1, sums to ~1).
+  /// Drives the percentage mode of the analytics donut.
+  Map<String, double> sharesByCategory() {
+    final total = totalSpent;
+    if (total <= 0) return const {};
+    final shares = <String, double>{};
+    totalsByCategory().forEach((id, amount) {
+      shares[id] = amount / total;
+    });
+    return shares;
+  }
+
   /// Monthly buckets oldest-first for the trend chart. Buckets by
   /// [Expense.date] year/month over the [months] ending at [reference].
   List<double> monthlyTotals({int months = 6, DateTime? reference}) {
@@ -59,6 +80,16 @@ class ExpenseStore extends ChangeNotifier {
       return _categories.firstWhere((c) => c.id == id);
     } on StateError {
       throw ArgumentError('Unknown category: $id');
+    }
+  }
+
+  /// Display name for a category id; "Other" when the id is unknown
+  /// (e.g. category deleted after expenses were logged).
+  String categoryName(String id) {
+    try {
+      return categoryById(id).name;
+    } on ArgumentError {
+      return 'Other';
     }
   }
 
