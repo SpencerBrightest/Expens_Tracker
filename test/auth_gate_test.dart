@@ -53,5 +53,20 @@ void main() {
       expect(find.text('Top Categories'), findsOneWidget);
       backend.dispose();
     });
+
+    testWidgets('auth event replaces Login with Dashboard', (tester) async {
+      final backend = FakeAuthBackend();
+      final service = AuthService(backend: backend);
+      await tester.pumpWidget(_withAuth(service, const AuthGate()));
+      await tester.pumpAndSettle();
+      expect(find.text('Login & Sign Up'), findsOneWidget);
+
+      await service.signInWithGoogle();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Top Categories'), findsOneWidget);
+      expect(find.text('Login & Sign Up'), findsNothing);
+      backend.dispose();
+    });
   });
 }
