@@ -8,6 +8,7 @@ import 'package:expense_tracker/screens/add_edit_expense_screen.dart';
 import 'package:expense_tracker/services/firestore_service.dart';
 import 'package:expense_tracker/services/notification_service.dart';
 import 'package:expense_tracker/theme/app_theme.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -31,12 +32,12 @@ class FakeLlm implements LlmBackend {
 }
 
 Expense _exp(String note) => Expense(
-      id: 'e1',
-      amount: 5000,
-      categoryId: 'c1',
-      note: note,
-      date: DateTime(2024, 11, 20),
-    );
+  id: 'e1',
+  amount: 5000,
+  categoryId: 'c1',
+  note: note,
+  date: DateTime(2026, 11, 20),
+);
 
 void main() {
   group('SummaryService', () {
@@ -126,7 +127,8 @@ void main() {
 
       test('malformed body returns input', () async {
         final client = MockClient(
-            (_) async => http.Response(jsonEncode({'nope': []}), 200));
+          (_) async => http.Response(jsonEncode({'nope': []}), 200),
+        );
         final backend = ProxyLlmBackend(
           client: client,
           endpoint: Uri.parse('https://example.test/getGeminiSummary'),
@@ -151,18 +153,17 @@ void main() {
           ),
         ],
       );
+      final service = FirestoreService(db: FakeFirebaseFirestore(), uid: 'u1');
       await tester.pumpWidget(
         MultiProvider(
           providers: [
             ChangeNotifierProvider<ExpenseStore>.value(value: store),
-            Provider<FirestoreService?>.value(value: null),
+            Provider<FirestoreService?>.value(value: service),
             ChangeNotifierProvider<NotificationService>(
               create: (_) =>
                   NotificationService(backend: FakeNotificationBackend()),
             ),
-            Provider<SummaryService>.value(
-              value: SummaryService(llm: llm),
-            ),
+            Provider<SummaryService>.value(value: SummaryService(llm: llm)),
           ],
           child: MaterialApp(
             theme: AppTheme.light(),
@@ -186,10 +187,7 @@ void main() {
 
       expect(llm.calls, 1);
       expect(store.expenses, hasLength(1));
-      expect(
-        store.expenses.first.summary,
-        '5000 XAF — Food, cleaned note',
-      );
+      expect(store.expenses.first.summary, '5000 XAF — Food, cleaned note');
     });
   });
 }

@@ -9,6 +9,7 @@ import 'package:expense_tracker/services/auth_service.dart';
 import 'package:expense_tracker/services/firestore_service.dart';
 import 'package:expense_tracker/services/notification_service.dart';
 import 'package:expense_tracker/theme/app_theme.dart';
+import 'package:expense_tracker/widgets/auth_gate.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -169,11 +170,7 @@ void main() {
           Provider<FirestoreService?>.value(value: null),
           Provider<SummaryService>.value(value: SummaryService()),
         ],
-        child: MaterialApp(
-          theme: AppTheme.light(),
-          home: const AuthScreen(),
-          routes: {'/dashboard': (_) => const DashboardShell()},
-        ),
+        child: MaterialApp(theme: AppTheme.light(), home: const AuthGate()),
       ),
     );
     await tester.pumpAndSettle();
@@ -209,11 +206,7 @@ void main() {
           Provider<FirestoreService?>.value(value: null),
           Provider<SummaryService>.value(value: SummaryService()),
         ],
-        child: MaterialApp(
-          theme: AppTheme.light(),
-          home: const AuthScreen(),
-          routes: {'/dashboard': (_) => const DashboardShell()},
-        ),
+        child: MaterialApp(theme: AppTheme.light(), home: const AuthGate()),
       ),
     );
     await tester.pumpAndSettle();
@@ -258,11 +251,7 @@ void main() {
           ),
           Provider<FirestoreService?>.value(value: null),
         ],
-        child: MaterialApp(
-          theme: AppTheme.light(),
-          home: const AuthScreen(),
-          routes: {'/dashboard': (_) => const DashboardShell()},
-        ),
+        child: MaterialApp(theme: AppTheme.light(), home: const AuthGate()),
       ),
     );
     await tester.pumpAndSettle();
