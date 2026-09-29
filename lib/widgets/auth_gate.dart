@@ -13,15 +13,16 @@ class AuthGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthService>();
+    final auth = context.read<AuthService>();
     return StreamBuilder<NdohUser?>(
       stream: auth.authStateChanges,
+      initialData: auth.currentUser,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SplashScreen();
-        }
         if (snapshot.data != null) {
           return const DashboardShell();
+        }
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SplashScreen();
         }
         return const AuthScreen();
       },
