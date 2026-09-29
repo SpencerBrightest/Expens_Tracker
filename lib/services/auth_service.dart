@@ -23,10 +23,9 @@ class NdohUser {
     }
     final prefix = email.split('@').first.trim();
     if (prefix.isEmpty) return 'Friend';
-    final first = prefix.split(RegExp(r'[._\-+]+')).firstWhere(
-          (p) => p.isNotEmpty,
-          orElse: () => prefix,
-        );
+    final first = prefix
+        .split(RegExp(r'[._\-+]+'))
+        .firstWhere((p) => p.isNotEmpty, orElse: () => prefix);
     if (first.isEmpty) return 'Friend';
     return first[0].toUpperCase() + first.substring(1);
   }
@@ -50,6 +49,34 @@ class NdohUser {
 /// the Google account picker). Screens must stay silent on this.
 class AuthCancelledException implements Exception {
   const AuthCancelledException();
+}
+
+class AuthFailure implements Exception {
+  const AuthFailure(this.message, {this.canSwitchToLogin = false});
+
+  final String message;
+  final bool canSwitchToLogin;
+
+  static AuthFailure fromFirebaseCode(String code) => switch (code) {
+    'email-already-in-use' => const AuthFailure(
+      'An account with this email already exists. Log in instead or '
+      'use a different email.',
+      canSwitchToLogin: true,
+    ),
+    'invalid-email' => const AuthFailure('Enter a valid email address.'),
+    'weak-password' => const AuthFailure(
+      'Choose a stronger password with at least 6 characters.',
+    ),
+    'user-not-found' || 'wrong-password' || 'invalid-credential' =>
+      const AuthFailure('Email or password is incorrect.'),
+    'network-request-failed' => const AuthFailure(
+      'Could not reach Firebase. Check your connection and try again.',
+    ),
+    'operation-not-allowed' => const AuthFailure(
+      'This sign-in method is not enabled in Firebase.',
+    ),
+    _ => const AuthFailure('Authentication failed. Please try again.'),
+  };
 }
 
 /// Backend contract. Production uses [FirebaseAuthBackend]; tests use a
@@ -78,12 +105,12 @@ abstract class AuthBackend {
 }
 
 NdohUser _toUser(User u) => NdohUser(
-      uid: u.uid,
-      email: u.email ?? '',
-      displayName: u.displayName?.trim().isEmpty ?? true
-          ? null
-          : u.displayName?.trim(),
-    );
+  uid: u.uid,
+  email: u.email ?? '',
+  displayName: u.displayName?.trim().isEmpty ?? true
+      ? null
+      : u.displayName?.trim(),
+);
 
 /// Thin wrapper over the GoogleSignIn singleton (initialize-once rule).
 /// Injectable for tests via [FirebaseAuthBackend].
@@ -112,8 +139,8 @@ class GoogleSignInFlow {
 
 class FirebaseAuthBackend implements AuthBackend {
   FirebaseAuthBackend([FirebaseAuth? auth, GoogleSignInFlow? googleFlow])
-      : _auth = auth ?? FirebaseAuth.instance,
-        _googleFlow = googleFlow ?? GoogleSignInFlow();
+    : _auth = auth ?? FirebaseAuth.instance,
+      _googleFlow = googleFlow ?? GoogleSignInFlow();
 
   final FirebaseAuth _auth;
   final GoogleSignInFlow _googleFlow;
@@ -130,11 +157,15 @@ class FirebaseAuthBackend implements AuthBackend {
 
   @override
   Future<NdohUser> signIn(String email, String password) async {
-    final cred = await _auth.signInWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
-    return _toUser(cred.user!);
+    try {
+      final cred = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      return _toUser(cred.user!);
+    } on FirebaseAuthException catch (e) {
+      throw AuthFailure.fromFirebaseCode(e.code);
+    }
   }
 
   @override
@@ -143,18 +174,29 @@ class FirebaseAuthBackend implements AuthBackend {
     String password, {
     String? displayName,
   }) async {
-    final cred = await _auth.createUserWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
-    final name = displayName?.trim();
-    if (name != null && name.isNotEmpty) {
-      await cred.user!.updateDisplayName(name);
-      await cred.user!.reload();
-      final fresh = _auth.currentUser;
-      if (fresh != null) return _toUser(fresh);
+    try {
+      final cred = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      final name = displayName?.trim();
+      if (name != null && name.isNotEmpty) {
+        await cred.user!.updateDisplayName(name);
+        await cred.user!.reload();
+        final fresh = _auth.currentUser;
+        if (fresh != null) return _toUser(fresh);
+      }
+      return _toUser(cred.user!);
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'invalid-credential' ||
+          e.code == 'account-exists-with-different-credential') {
+        throw const AuthFailure(
+          'Google credentials were rejected. Enable Google sign-in in Firebase '
+          'and register this Android app\'s SHA-1 fingerprint.',
+        );
+      }
+      throw AuthFailure.fromFirebaseCode(e.code);
     }
-    return _toUser(cred.user!);
   }
 
   @override
@@ -166,16 +208,25 @@ class FirebaseAuthBackend implements AuthBackend {
       if (e.code == GoogleSignInExceptionCode.canceled) {
         throw const AuthCancelledException();
       }
-      rethrow;
+      throw const AuthFailure(
+        'Google sign-in could not complete. Check that Google sign-in is '
+        'enabled in Firebase and try again.',
+      );
     }
-    final idToken = account.authentication.idToken;
-    if (idToken == null) {
-      throw StateError('Google sign-in returned no ID token');
+    try {
+      final idToken = account.authentication.idToken;
+      if (idToken == null) {
+        throw const AuthFailure(
+          'Google did not return an authentication token. Please try again.',
+        );
+      }
+      final cred = await _auth.signInWithCredential(
+        GoogleAuthProvider.credential(idToken: idToken),
+      );
+      return _toUser(cred.user!);
+    } on FirebaseAuthException catch (e) {
+      throw AuthFailure.fromFirebaseCode(e.code);
     }
-    final cred = await _auth.signInWithCredential(
-      GoogleAuthProvider.credential(idToken: idToken),
-    );
-    return _toUser(cred.user!);
   }
 
   @override
@@ -200,8 +251,7 @@ class FirebaseAuthBackend implements AuthBackend {
       },
       verificationFailed: (FirebaseAuthException e) =>
           onError(e.message ?? e.code),
-      codeSent: (String verificationId, int? _) =>
-          onCodeSent(verificationId),
+      codeSent: (String verificationId, int? _) => onCodeSent(verificationId),
       codeAutoRetrievalTimeout: (_) {},
     );
   }
@@ -212,9 +262,7 @@ class FirebaseAuthBackend implements AuthBackend {
     required String smsCode,
   }) async {
     if (verificationId.trim().isEmpty || smsCode.trim().isEmpty) {
-      throw ArgumentError(
-        'Verification ID and SMS code must not be blank',
-      );
+      throw ArgumentError('Verification ID and SMS code must not be blank');
     }
     final cred = await _auth.signInWithCredential(
       PhoneAuthProvider.credential(
@@ -232,7 +280,8 @@ class FirebaseAuthBackend implements AuthBackend {
   }
 
   @override
-  Future<String?> getIdToken() => _auth.currentUser?.getIdToken() ?? Future.value(null);
+  Future<String?> getIdToken() =>
+      _auth.currentUser?.getIdToken() ?? Future.value(null);
 }
 
 /// Entry point for screens. Validates input, delegates to the backend.
@@ -242,11 +291,12 @@ class FirebaseAuthBackend implements AuthBackend {
 /// token refresh, other devices).
 class AuthService extends ChangeNotifier {
   AuthService({AuthBackend? backend})
-      : _backend = backend ?? FirebaseAuthBackend() {
+    : _backend = backend ?? FirebaseAuthBackend() {
     _sub = _backend.authStateChanges().listen((_) => notifyListeners());
   }
 
   final AuthBackend _backend;
+  late final Stream<NdohUser?> _authStateChanges = _backend.authStateChanges();
   late final StreamSubscription<NdohUser?> _sub;
 
   @override
@@ -255,7 +305,7 @@ class AuthService extends ChangeNotifier {
     super.dispose();
   }
 
-  Stream<NdohUser?> get authStateChanges => _backend.authStateChanges();
+  Stream<NdohUser?> get authStateChanges => _authStateChanges;
   NdohUser? get currentUser => _backend.currentUser;
 
   /// ID token for authenticated backend calls. Null when signed out.
@@ -273,9 +323,7 @@ class AuthService extends ChangeNotifier {
         .where((p) => p.isNotEmpty)
         .toList();
     if (parts.isEmpty) return 'Friend';
-    return parts
-        .map((p) => p[0].toUpperCase() + p.substring(1))
-        .join(' ');
+    return parts.map((p) => p[0].toUpperCase() + p.substring(1)).join(' ');
   }
 
   static void _check(String email, String password) {
@@ -307,8 +355,7 @@ class AuthService extends ChangeNotifier {
     // reflects the authenticated user, even when the name field is left
     // blank on the signup form.
     final typed = displayName?.trim() ?? '';
-    final resolved =
-        typed.isEmpty ? displayNameFromEmail(email) : typed;
+    final resolved = typed.isEmpty ? displayNameFromEmail(email) : typed;
     final user = await _backend.signUp(
       email.trim(),
       password,
@@ -344,9 +391,7 @@ class AuthService extends ChangeNotifier {
     required String smsCode,
   }) async {
     if (verificationId.trim().isEmpty || smsCode.trim().isEmpty) {
-      throw ArgumentError(
-        'Verification ID and SMS code must not be blank',
-      );
+      throw ArgumentError('Verification ID and SMS code must not be blank');
     }
     final user = await _backend.confirmPhoneCode(
       verificationId: verificationId,
