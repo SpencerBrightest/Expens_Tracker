@@ -29,8 +29,14 @@ void main() async {
       store: seedStore(),
       authService: AuthService(),
       notificationService: notifications,
-      // Real Gemini path (template-only until --dart-define=GEMINI_API_KEY).
-      summaryService: SummaryService(llm: const GeminiLlmBackend()),
+      // Template-only until the authenticated proxy (functions/
+      // getGeminiSummary) is deployed; then wire:
+      // summaryService: SummaryService(llm: ProxyLlmBackend(
+      //   endpoint: Uri.parse(
+      //       'https://us-central1-expense-tracker-ca5d2.cloudfunctions.net/getGeminiSummary'),
+      //   idTokenProvider: () => authService.getIdToken(),
+      // )),
+      summaryService: SummaryService(),
     ),
   );
 }

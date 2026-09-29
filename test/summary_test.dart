@@ -73,58 +73,66 @@ void main() {
       expect(summary, '5000 XAF — Food, $note');
     });
 
-    test('Gemini backend without key returns input (no network)',
-        () async {
-      const backend = GeminiLlmBackend(apiKey: '');
-      expect(await backend.cleanup('some note'), 'some note');
-    });
-
-    group('Gemini HTTP transport (mocked)', () {
-      test('posts note and parses cleaned label', () async {
+    group('Proxy HTTP transport (mocked)', () {
+      test('sends bearer token and returns proxied summary', () async {
+        String? seenAuth;
         Object? sentBody;
         final client = MockClient((req) async {
-          expect(req.url.host, 'generativelanguage.googleapis.com');
-          expect(req.url.queryParameters['key'], 'k123');
+          seenAuth = req.headers['Authorization'];
           expect(req.headers['Content-Type'], contains('application/json'));
           sentBody = jsonDecode(req.body);
           return http.Response(
-            jsonEncode({
-              'candidates': [
-                {
-                  'content': {
-                    'parts': [
-                      {'text': '  bulk grocery restock  '},
-                    ],
-                  },
-                },
-              ],
-            }),
+            jsonEncode({'summary': 'bulk grocery restock'}),
             200,
           );
         });
-        final backend = GeminiLlmBackend(client: client, apiKey: 'k123');
-        expect(await backend.cleanup('a very long messy note'),
-            'bulk grocery restock');
+        final backend = ProxyLlmBackend(
+          client: client,
+          endpoint: Uri.parse('https://example.test/getGeminiSummary'),
+          idTokenProvider: () async => 'tok123',
+        );
+        expect(
+          await backend.cleanup('a very long messy note'),
+          'bulk grocery restock',
+        );
+        expect(seenAuth, 'Bearer tok123');
         expect((sentBody as Map).toString(), contains('a very long messy'));
+      });
+
+      test('missing token returns input without network', () async {
+        var called = false;
+        final client = MockClient((_) async {
+          called = true;
+          return http.Response('{}', 200);
+        });
+        final backend = ProxyLlmBackend(
+          client: client,
+          endpoint: Uri.parse('https://example.test/getGeminiSummary'),
+          idTokenProvider: () async => null,
+        );
+        expect(await backend.cleanup('keep me'), 'keep me');
+        expect(called, isFalse);
       });
 
       test('non-200 response returns input', () async {
         final client = MockClient((_) async => http.Response('denied', 403));
-        final backend = GeminiLlmBackend(client: client, apiKey: 'k123');
+        final backend = ProxyLlmBackend(
+          client: client,
+          endpoint: Uri.parse('https://example.test/getGeminiSummary'),
+          idTokenProvider: () async => 'tok123',
+        );
         expect(await backend.cleanup('keep me'), 'keep me');
       });
 
       test('malformed body returns input', () async {
         final client = MockClient(
             (_) async => http.Response(jsonEncode({'nope': []}), 200));
-        final backend = GeminiLlmBackend(client: client, apiKey: 'k123');
+        final backend = ProxyLlmBackend(
+          client: client,
+          endpoint: Uri.parse('https://example.test/getGeminiSummary'),
+          idTokenProvider: () async => 'tok123',
+        );
         expect(await backend.cleanup('keep me'), 'keep me');
-      });
-
-      test('requestUri targets generateContent with key', () {
-        final uri = GeminiLlmBackend.requestUri('k123');
-        expect(uri.path, contains('generateContent'));
-        expect(uri.queryParameters['key'], 'k123');
       });
     });
   });

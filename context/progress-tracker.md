@@ -11,5 +11,6 @@
 - [x] Phase 7: NotificationService (daily 8pm reminder, 80/100% budget
       alerts) + Settings toggles + POST_NOTIFICATIONS manifest
 - [x] Phase 8: AI touches — suggestion chip (keyword+debounce), summary
-      (template default, Gemini when long, async patch), insight card.
-      Key via --dart-define=GEMINI_API_KEY (never committed).
+      (template default, authenticated Cloud Function proxy when long,
+      async patch), insight card. Gemini key as Functions secret, never in
+      the client.
