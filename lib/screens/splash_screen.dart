@@ -97,9 +97,7 @@ class _SplashScreenState extends State<SplashScreen> {
                       1.0,
                     ),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(
-                      alpha: active ? 1.0 : 0.4,
-                    ),
+                    color: Colors.white.withValues(alpha: active ? 1.0 : 0.4),
                     shape: BoxShape.circle,
                   ),
                 );

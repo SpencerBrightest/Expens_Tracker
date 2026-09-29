@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import 'ai/summary.dart';
 import 'firebase_options.dart';
 import 'providers/expense_store.dart';
-import 'screens/auth_screen.dart';
 import 'services/auth_service.dart';
 import 'services/firestore_service.dart';
 import 'services/notification_service.dart';
@@ -86,7 +85,7 @@ class NdohApp extends StatelessWidget {
         theme: AppTheme.light(),
         home: const SplashGate(),
         routes: {
-          '/auth': (_) => const AuthScreen(),
+          '/auth': (_) => const AuthGate(),
           '/dashboard': (_) => const AuthGate(),
         },
       ),
