@@ -69,6 +69,9 @@ class FakeAuthBackend implements AuthBackend {
     _ctrl.add(null);
   }
 
+  @override
+  Future<String?> getIdToken() async => _user == null ? null : 'tok-fake';
+
   void dispose() => _ctrl.close();
 }
 

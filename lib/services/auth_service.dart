@@ -71,6 +71,10 @@ abstract class AuthBackend {
     required String smsCode,
   });
   Future<void> signOut();
+
+  /// Firebase ID token for authenticated backend calls (null signed out).
+  /// Lives here so screens/AI layers never import firebase_auth directly.
+  Future<String?> getIdToken();
 }
 
 NdohUser _toUser(User u) => NdohUser(
@@ -226,6 +230,9 @@ class FirebaseAuthBackend implements AuthBackend {
     await _auth.signOut();
     await _googleFlow.signOut();
   }
+
+  @override
+  Future<String?> getIdToken() => _auth.currentUser?.getIdToken() ?? Future.value(null);
 }
 
 /// Entry point for screens. Validates input, delegates to the backend.
@@ -250,6 +257,9 @@ class AuthService extends ChangeNotifier {
 
   Stream<NdohUser?> get authStateChanges => _backend.authStateChanges();
   NdohUser? get currentUser => _backend.currentUser;
+
+  /// ID token for authenticated backend calls. Null when signed out.
+  Future<String?> getIdToken() => _backend.getIdToken();
 
   /// Friendly name derived from the email address, so the greeting is
   /// always the signed-in person's own name ("Hey Spencer") and never a

@@ -166,5 +166,14 @@ void main() {
       expect(user.firstName, 'Spencer');
       backend.dispose();
     });
+    test('getIdToken exposes the backend token (null when signed out)',
+        () async {
+      final backend = FakeAuthBackend();
+      final service = AuthService(backend: backend);
+      expect(await service.getIdToken(), isNull);
+      await service.signIn('a@x.com', 'secret123');
+      expect(await service.getIdToken(), 'tok-fake');
+      backend.dispose();
+    });
   });
 }
