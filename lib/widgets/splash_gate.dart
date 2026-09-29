@@ -7,12 +7,9 @@ import 'auth_gate.dart';
 
 /// Cold-start gate: shows the custom Ndoh [SplashScreen] for [duration],
 /// then hands off to [AuthGate] (which listens to authStateChanges and
-/// routes signed-out users to the public Homepage, signed-in to Dashboard).
+/// routes signed-out users to Login, signed-in users to Dashboard).
 class SplashGate extends StatefulWidget {
-  const SplashGate({
-    super.key,
-    this.duration = const Duration(seconds: 2),
-  });
+  const SplashGate({super.key, this.duration = const Duration(seconds: 2)});
 
   final Duration duration;
 

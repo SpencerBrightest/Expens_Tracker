@@ -1,11 +1,13 @@
 # AGENTS.md — Ndoh Expense Tracker
 
 ## What this is
+
 Ndoh is a personal expense-tracking Flutter app: spending tracking, categories,
 charts, Firebase backend, notifications, plus lightweight AI touches on top of a
 solid manual tracker.
 
 ## Build order (do not skip ahead)
+
 1. Static UI — all screens, dummy data, full navigation wired
 2. Models — Expense, Category
 3. State — Provider/ChangeNotifier in-memory expense list
@@ -16,11 +18,14 @@ solid manual tracker.
 8. AI touches last — category-suggestion chip, summary builder, insight card
 
 ## Navigation flow
-Splash -> Homepage (public marketing, NOT dashboard) -> Auth (Login/Signup toggle)
--> Dashboard shell (authenticated, bottom-nav: Home, Transactions, Categories,
-Analytics, Settings) -> Add/Edit Expense modal via FAB.
+
+Splash -> Auth (Login/Signup with Google sign-in) -> Dashboard shell
+(authenticated, bottom-nav: Home, Transactions, Categories, Analytics, Settings)
+-> Add/Edit Expense modal via FAB. No app route may expose the dashboard
+before the auth-state gate confirms a signed-in user.
 
 ## Critical rules
+
 - App name: Ndoh everywhere.
 - Flat colors only — no `LinearGradient` / `RadialGradient` anywhere.
 - Palette exclusively from Stitch exports (`lib/theme/app_colors.dart`), never
@@ -43,6 +48,7 @@ Analytics, Settings) -> Add/Edit Expense modal via FAB.
   optimistic UI on save with rollback, debounce typing-triggered work.
 
 ## File structure
+
 lib/main.dart, lib/theme/, lib/data/dummy_data.dart, lib/models/expense.dart,
 category.dart, lib/screens/ (splash, homepage, auth, dashboard_shell, home_tab,
 transactions, categories, analytics, settings, add_edit_expense), lib/services/
@@ -50,6 +56,7 @@ transactions, categories, analytics, settings, add_edit_expense), lib/services/
 spending_trend_chart), firebase_options.dart (generated via flutterfire, Phase 5).
 
 ## Verification per task
+
 `flutter analyze`, `flutter test`, `flutter run` manual walk
 Splash->Homepage->Auth->5 tabs->FAB modal. Commit locally per checkpoint.
 Never push without explicit user approval. Never force-push.

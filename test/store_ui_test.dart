@@ -19,20 +19,20 @@ import 'package:provider/provider.dart';
 import 'fakes.dart';
 
 Category _cat() => Category(
-      id: 'c1',
-      name: 'Food',
-      monthlyLimit: 1000,
-      colorValue: 0xFFFA5A36,
-      iconCodePoint: 0xe318,
-    );
+  id: 'c1',
+  name: 'Food',
+  monthlyLimit: 1000,
+  colorValue: 0xFFFA5A36,
+  iconCodePoint: 0xe318,
+);
 
 Expense _exp() => Expense(
-      id: 'e1',
-      amount: 2500,
-      categoryId: 'c1',
-      note: 'moto to school',
-      date: DateTime(2024, 11, 20),
-    );
+  id: 'e1',
+  amount: 2500,
+  categoryId: 'c1',
+  note: 'moto to school',
+  date: DateTime(2024, 11, 20),
+);
 
 ExpenseStore _seededStore() {
   final store = ExpenseStore(categories: [_cat()]);
@@ -40,19 +40,24 @@ ExpenseStore _seededStore() {
   return store;
 }
 
-Widget _withStore(ExpenseStore store, Widget child,
-    {FirestoreService? service}) {
+Widget _withStore(
+  ExpenseStore store,
+  Widget child, {
+  FirestoreService? service,
+}) {
   return MultiProvider(
     providers: [
       ChangeNotifierProvider<ExpenseStore>.value(value: store),
       Provider<FirestoreService?>.value(value: service),
       ChangeNotifierProvider<NotificationService>(
-        create: (_) =>
-            NotificationService(backend: FakeNotificationBackend()),
+        create: (_) => NotificationService(backend: FakeNotificationBackend()),
       ),
       Provider<SummaryService>.value(value: SummaryService()),
     ],
-    child: MaterialApp(theme: AppTheme.light(), home: Scaffold(body: child)),
+    child: MaterialApp(
+      theme: AppTheme.light(),
+      home: Scaffold(body: child),
+    ),
   );
 }
 
@@ -67,8 +72,7 @@ Future<void> _reveal(WidgetTester tester, Finder target) async {
 
 void main() {
   group('Screens read ExpenseStore', () {
-    testWidgets('HomeTab shows store total and recent note',
-        (tester) async {
+    testWidgets('HomeTab shows store total and recent note', (tester) async {
       await tester.pumpWidget(_withStore(_seededStore(), const HomeTab()));
       await tester.pumpAndSettle();
       expect(find.text(xafFormat.format(2500)), findsWidgets);
@@ -108,21 +112,14 @@ void main() {
 
   group('AddEditExpenseScreen', () {
     testWidgets('Save persists to store and remote', (tester) async {
-      final service = FirestoreService(
-        db: FakeFirebaseFirestore(),
-        uid: 'u1',
-      );
+      final service = FirestoreService(db: FakeFirebaseFirestore(), uid: 'u1');
       final store = ExpenseStore(categories: [_cat()]);
       await tester.pumpWidget(
-        _withStore(store, const AddEditExpenseScreen(),
-            service: service),
+        _withStore(store, const AddEditExpenseScreen(), service: service),
       );
       await tester.pumpAndSettle();
 
-      await tester.enterText(
-        find.byType(TextField).last,
-        'moto to school',
-      );
+      await tester.enterText(find.byType(TextField).last, 'moto to school');
       await tester.pump();
       await _reveal(tester, find.text('Save Expense'));
       await tester.tap(find.text('Save Expense'));
@@ -130,17 +127,18 @@ void main() {
 
       expect(store.expenses, hasLength(1));
       expect(store.expenses.first.note, 'moto to school');
-      expect(
-        (await service.watchExpenses().first).map((e) => e.note),
-        ['moto to school'],
-      );
+      expect((await service.watchExpenses().first).map((e) => e.note), [
+        'moto to school',
+      ]);
     });
 
-    testWidgets('empty categories offers inline creation on save',
-        (tester) async {
+    testWidgets('empty categories offers inline creation on save', (
+      tester,
+    ) async {
       final store = ExpenseStore();
+      final service = FirestoreService(db: FakeFirebaseFirestore(), uid: 'u1');
       await tester.pumpWidget(
-        _withStore(store, const AddEditExpenseScreen()),
+        _withStore(store, const AddEditExpenseScreen(), service: service),
       );
       await tester.pumpAndSettle();
 
@@ -156,9 +154,25 @@ void main() {
 
       expect(store.categories.map((c) => c.name), ['Transport']);
       expect(store.expenses, hasLength(1));
+      expect(store.expenses.first.categoryId, store.categories.first.id);
+      expect(await service.watchCategories().first, hasLength(1));
+      expect(await service.watchExpenses().first, hasLength(1));
+    });
+
+    testWidgets('does not save locally when Firestore is unavailable', (
+      tester,
+    ) async {
+      final store = ExpenseStore(categories: [_cat()]);
+      await tester.pumpWidget(_withStore(store, const AddEditExpenseScreen()));
+      await tester.pumpAndSettle();
+      await _reveal(tester, find.text('Save Expense'));
+      await tester.tap(find.text('Save Expense'));
+      await tester.pumpAndSettle();
+
+      expect(store.expenses, isEmpty);
       expect(
-        store.expenses.first.categoryId,
-        store.categories.first.id,
+        find.text('Could not save. Sign in and try again.'),
+        findsOneWidget,
       );
     });
   });

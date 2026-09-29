@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../screens/auth_screen.dart';
 import '../screens/dashboard_shell.dart';
-import '../screens/homepage_screen.dart';
 import '../screens/splash_screen.dart';
 import '../services/auth_service.dart';
 
 /// Auth-gated navigation. Listens to [AuthService.authStateChanges] —
-/// never a one-time check. Signed-out users land on the public Homepage
-/// (marketing), never the Dashboard.
+/// never a one-time check. Signed-out users land on Login, never Dashboard.
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 
@@ -24,7 +23,7 @@ class AuthGate extends StatelessWidget {
         if (snapshot.data != null) {
           return const DashboardShell();
         }
-        return const HomepageScreen();
+        return const AuthScreen();
       },
     );
   }

@@ -13,17 +13,15 @@ import '../services/firestore_service.dart';
 import '../services/notification_service.dart';
 import '../theme/app_colors.dart';
 
-/// Add/Edit modal. Saves to [ExpenseStore] locally and — when signed in
-/// ([FirestoreService] available) — persists remotely with optimistic
-/// UI + rollback. Never blocks on the network.
+/// Add/Edit modal. Requires the signed-in user's [FirestoreService] and
+/// persists remotely with optimistic UI + rollback.
 class AddEditExpenseScreen extends StatefulWidget {
   const AddEditExpenseScreen({super.key, this.expense});
 
   final Expense? expense;
 
   @override
-  State<AddEditExpenseScreen> createState() =>
-      _AddEditExpenseScreenState();
+  State<AddEditExpenseScreen> createState() => _AddEditExpenseScreenState();
 }
 
 class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
@@ -74,6 +72,12 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
     final store = context.read<ExpenseStore>();
     final service = context.read<FirestoreService?>();
     final messenger = ScaffoldMessenger.of(context);
+    if (service == null) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Could not save. Sign in and try again.')),
+      );
+      return;
+    }
     final categories = store.categories;
     // No silent dead-end: with no categories yet, create one inline from
     // the "New category" field.
@@ -81,9 +85,9 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
     if (categories.isEmpty) {
       final name = _newCategory.text.trim();
       if (name.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Name a category first')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Name a category first')));
         return;
       }
       final created = Category(
@@ -95,12 +99,10 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
       );
       try {
         store.addCategory(created);
-        if (service != null) await service.saveCategory(created);
+        await service.saveCategory(created);
       } catch (e) {
         if (!mounted) return;
-        messenger.showSnackBar(
-          SnackBar(content: Text('Could not save: $e')),
-        );
+        messenger.showSnackBar(SnackBar(content: Text('Could not save: $e')));
         return;
       }
       categoryId = created.id;
@@ -115,8 +117,7 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
       return;
     }
     final expense = Expense(
-      id: widget.expense?.id ??
-          'e${DateTime.now().microsecondsSinceEpoch}',
+      id: widget.expense?.id ?? 'e${DateTime.now().microsecondsSinceEpoch}',
       amount: amount,
       categoryId: categoryId,
       note: _note.text.trim(),
@@ -125,31 +126,25 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
     );
     setState(() => _busy = true);
     try {
-      if (service == null) {
-        if (widget.expense == null) {
-          store.addExpense(expense);
-        } else {
-          store.updateExpense(expense);
-        }
-      } else {
-        await store.persistExpense(service, expense);
-      }
+      await store.persistExpense(service, expense);
       if (!mounted) return;
       // Fire-and-forget threshold check (never blocks Save).
       final cat = store.categoryFor(expense);
-      context.read<NotificationService>().budgetAlertIfNeeded(
+      context
+          .read<NotificationService>()
+          .budgetAlertIfNeeded(
             categoryName: cat.name,
             spent: store.totalByCategory(categoryId),
             limit: cat.monthlyLimit,
-          ).ignore();
+          )
+          .ignore();
       // Fire-and-forget AI summary patch (never blocks Save).
-      _patchSummaryAsync(expense, cat.name);
+      _patchSummaryAsync(expense, cat.name, service);
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not save: $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Could not save: $e')));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -158,9 +153,12 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
   /// Async summary patch: saves happen immediately with the template
   /// summary; the LLM-cleaned version patches in when ready. All errors
   /// swallowed — Save must never fail because of AI.
-  void _patchSummaryAsync(Expense expense, String categoryName) {
+  void _patchSummaryAsync(
+    Expense expense,
+    String categoryName,
+    FirestoreService service,
+  ) {
     final store = context.read<ExpenseStore>();
-    final service = context.read<FirestoreService?>();
     final summarizer = context.read<SummaryService>();
     Future(() async {
       try {
@@ -170,18 +168,10 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
         );
         if (summary == expense.summary) return;
         final updated = expense.copyWith(summary: summary);
-        if (service == null) {
-          try {
-            store.updateExpense(updated);
-          } catch (_) {
-            // Expense may be gone (deleted/rolled back); ignore.
-          }
-        } else {
-          try {
-            await store.persistExpense(service, updated);
-          } catch (_) {
-            // Remote patch failed; local template summary stands.
-          }
+        try {
+          await store.persistExpense(service, updated);
+        } catch (_) {
+          // Remote patch failed; the saved template summary stands.
         }
       } catch (_) {
         // Never let AI break the app.
@@ -192,8 +182,9 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
   @override
   Widget build(BuildContext context) {
     final categories = context.watch<ExpenseStore>().categories;
-    final selected = _categoryId ??=
-        categories.isEmpty ? null : categories.first.id;
+    final selected = _categoryId ??= categories.isEmpty
+        ? null
+        : categories.first.id;
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(
@@ -239,9 +230,8 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
                 children: [1000, 5000, 10000, 25000].map((v) {
                   return ActionChip(
                     label: Text('+${xafFormat.format(v)}'),
-                    onPressed: () => setState(
-                      () => _amount.text = v.toString(),
-                    ),
+                    onPressed: () =>
+                        setState(() => _amount.text = v.toString()),
                   );
                 }).toList(),
               ),
@@ -257,15 +247,11 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
               else
                 DropdownButtonFormField<String>(
                   initialValue: selected,
-                  decoration: const InputDecoration(
-                    labelText: 'Category',
-                  ),
+                  decoration: const InputDecoration(labelText: 'Category'),
                   items: categories
                       .map(
-                        (c) => DropdownMenuItem(
-                          value: c.id,
-                          child: Text(c.name),
-                        ),
+                        (c) =>
+                            DropdownMenuItem(value: c.id, child: Text(c.name)),
                       )
                       .toList(),
                   onChanged: (v) => setState(() => _categoryId = v),
@@ -278,33 +264,36 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
                   hintText: 'e.g. moto to school',
                 ),
               ),
-              Builder(builder: (context) {
-                final suggestedId = _suggestedId;
-                final currentId = _categoryId ??
-                    (categories.isEmpty ? null : categories.first.id);
-                if (suggestedId == null || suggestedId == currentId) {
-                  return const SizedBox.shrink();
-                }
-                String? name;
-                for (final c in categories) {
-                  if (c.id == suggestedId) {
-                    name = c.name;
-                    break;
+              Builder(
+                builder: (context) {
+                  final suggestedId = _suggestedId;
+                  final currentId =
+                      _categoryId ??
+                      (categories.isEmpty ? null : categories.first.id);
+                  if (suggestedId == null || suggestedId == currentId) {
+                    return const SizedBox.shrink();
                   }
-                }
-                if (name == null) return const SizedBox.shrink();
-                return Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: ActionChip(
-                    avatar: const Icon(Icons.auto_awesome_outlined, size: 18),
-                    label: Text('Try $name'),
-                    onPressed: () => setState(() {
-                      _categoryId = suggestedId;
-                      _suggestedId = null;
-                    }),
-                  ),
-                );
-              }),
+                  String? name;
+                  for (final c in categories) {
+                    if (c.id == suggestedId) {
+                      name = c.name;
+                      break;
+                    }
+                  }
+                  if (name == null) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: ActionChip(
+                      avatar: const Icon(Icons.auto_awesome_outlined, size: 18),
+                      label: Text('Try $name'),
+                      onPressed: () => setState(() {
+                        _categoryId = suggestedId;
+                        _suggestedId = null;
+                      }),
+                    ),
+                  );
+                },
+              ),
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: _busy ? null : _save,

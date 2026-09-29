@@ -1,17 +1,51 @@
-# expense_tracker
+# Ndoh Expense Tracker
 
-A new Flutter project.
+## Run
 
-## Getting Started
+Firebase is initialized from the generated `lib/firebase_options.dart`.
+Signed-out users are sent to Login; expenses are saved under the signed-in
+user's Firestore account.
 
-This project is a starting point for a Flutter application.
+To run with Gemini note cleanup enabled, put `GEMINI_API_KEY` in the ignored
+root `.env` file and run:
 
-A few resources to get you started if this is your first Flutter project:
+```powershell
+.\tool\run_flutter_with_env.ps1 run
+```
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+Pass additional Flutter arguments after `run`, for example:
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```powershell
+.\tool\run_flutter_with_env.ps1 run -d chrome
+```
+
+Gemini cleanup is used only for expense notes longer than 120 characters; short
+notes use the instant template summary. A Gemini key compiled into a client app
+can be extracted, so production deployments should call Gemini through a
+server-side endpoint instead.
+
+# Ndoh Expense Tracker
+
+## Run
+
+Firebase is initialized from the generated `lib/firebase_options.dart`.
+Signed-out users are sent to Login; expenses are saved under the signed-in
+user's Firestore account.
+
+To run with Gemini note cleanup enabled, put `GEMINI_API_KEY` in the ignored
+root `.env` file and run:
+
+```powershell
+.\tool\run_flutter_with_env.ps1 run
+```
+
+Pass additional Flutter arguments after `run`, for example:
+
+```powershell
+.\tool\run_flutter_with_env.ps1 run -d chrome
+```
+
+Gemini cleanup is used only for expense notes longer than 120 characters; short
+notes use the instant template summary. A Gemini key compiled into a client app
+can be extracted, so production deployments should call Gemini through a
+server-side endpoint instead.

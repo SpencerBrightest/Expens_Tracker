@@ -6,12 +6,11 @@ import 'ai/summary.dart';
 import 'firebase_options.dart';
 import 'providers/expense_store.dart';
 import 'screens/auth_screen.dart';
-import 'screens/dashboard_shell.dart';
-import 'screens/homepage_screen.dart';
 import 'services/auth_service.dart';
 import 'services/firestore_service.dart';
 import 'services/notification_service.dart';
 import 'theme/app_theme.dart';
+import 'widgets/auth_gate.dart';
 import 'widgets/splash_gate.dart';
 
 /// Fresh users start with a clean slate: no categories, no expenses.
@@ -21,9 +20,7 @@ ExpenseStore seedStore() => ExpenseStore();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   final notifications = NotificationService();
   await notifications.init();
   await notifications.setDailyReminder(true);
@@ -43,8 +40,13 @@ void main() async {
 /// never a one-time check.
 /// [FirestoreService] is exposed per signed-in user (null when signed out).
 class NdohApp extends StatelessWidget {
-  const NdohApp(
-      {super.key, this.store, this.authService, this.notificationService, this.summaryService});
+  const NdohApp({
+    super.key,
+    this.store,
+    this.authService,
+    this.notificationService,
+    this.summaryService,
+  });
 
   final ExpenseStore? store;
   final AuthService? authService;
@@ -55,9 +57,7 @@ class NdohApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider<ExpenseStore>.value(
-          value: store ?? seedStore(),
-        ),
+        ChangeNotifierProvider<ExpenseStore>.value(value: store ?? seedStore()),
         ChangeNotifierProvider<AuthService>.value(
           value: authService ?? AuthService(),
         ),
@@ -70,9 +70,7 @@ class NdohApp extends StatelessWidget {
         ProxyProvider<AuthService, FirestoreService?>(
           update: (_, auth, _) {
             final user = auth.currentUser;
-            return user == null
-                ? null
-                : FirestoreService(uid: user.uid);
+            return user == null ? null : FirestoreService(uid: user.uid);
           },
         ),
       ],
@@ -82,9 +80,8 @@ class NdohApp extends StatelessWidget {
         theme: AppTheme.light(),
         home: const SplashGate(),
         routes: {
-          '/home': (_) => const HomepageScreen(),
           '/auth': (_) => const AuthScreen(),
-          '/dashboard': (_) => const DashboardShell(),
+          '/dashboard': (_) => const AuthGate(),
         },
       ),
     );

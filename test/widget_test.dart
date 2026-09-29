@@ -20,17 +20,14 @@ Widget _wrap(Widget child, {FakeAuthBackend? backend}) {
   final b = backend ?? FakeAuthBackend();
   return MultiProvider(
     providers: [
-      ChangeNotifierProvider<ExpenseStore>(
-        create: (_) => ExpenseStore(),
-      ),
+      ChangeNotifierProvider<ExpenseStore>(create: (_) => ExpenseStore()),
       ChangeNotifierProvider<AuthService>(
         create: (_) => AuthService(backend: b),
         // Owned fakes leak their broadcast controller; tests are
         // short-lived so this is acceptable (matches other suites).
       ),
       ChangeNotifierProvider<NotificationService>(
-        create: (_) =>
-            NotificationService(backend: FakeNotificationBackend()),
+        create: (_) => NotificationService(backend: FakeNotificationBackend()),
       ),
       Provider<FirestoreService?>.value(value: null),
     ],
@@ -61,23 +58,25 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
   });
 
-  testWidgets('NdohApp boots to Splash then Homepage (signed out)',
-      (tester) async {
+  testWidgets('NdohApp boots to Splash then Login (signed out)', (
+    tester,
+  ) async {
     final backend = FakeAuthBackend();
     await tester.pumpWidget(
       NdohApp(
         store: ExpenseStore(),
         authService: AuthService(backend: backend),
-        notificationService:
-            NotificationService(backend: FakeNotificationBackend()),
+        notificationService: NotificationService(
+          backend: FakeNotificationBackend(),
+        ),
       ),
     );
     expect(find.text('Ndoh'), findsOneWidget);
     // SplashGate holds the custom splash ~2s before handing off to AuthGate.
     await tester.pump(const Duration(seconds: 2));
     await tester.pumpAndSettle();
-    await _reveal(tester, find.text('Get started'));
-    expect(find.text('Get started'), findsOneWidget);
+    expect(find.text('Login & Sign Up'), findsOneWidget);
+    expect(find.text('Welcome back'), findsOneWidget);
     backend.dispose();
   });
 
@@ -94,9 +93,7 @@ void main() {
     await tester.pumpWidget(
       MultiProvider(
         providers: [
-          ChangeNotifierProvider<ExpenseStore>(
-            create: (_) => ExpenseStore(),
-          ),
+          ChangeNotifierProvider<ExpenseStore>(create: (_) => ExpenseStore()),
           ChangeNotifierProvider<AuthService>(
             create: (_) => AuthService(backend: FakeAuthBackend()),
           ),
@@ -120,8 +117,7 @@ void main() {
     expect(find.text('Login & Sign Up'), findsOneWidget);
   });
 
-  testWidgets('Auth fields start empty (no demo credentials)',
-      (tester) async {
+  testWidgets('Auth fields start empty (no demo credentials)', (tester) async {
     await tester.pumpWidget(_wrap(const AuthScreen()));
     await tester.pumpAndSettle();
     final fields = tester.widgetList<TextField>(find.byType(TextField));
@@ -155,15 +151,14 @@ void main() {
     expect(find.text('Create your account'), findsOneWidget);
   });
 
-  testWidgets('Continue with Google signs in and opens Dashboard',
-      (tester) async {
+  testWidgets('Continue with Google signs in and opens Dashboard', (
+    tester,
+  ) async {
     final backend = FakeAuthBackend();
     await tester.pumpWidget(
       MultiProvider(
         providers: [
-          ChangeNotifierProvider<ExpenseStore>(
-            create: (_) => ExpenseStore(),
-          ),
+          ChangeNotifierProvider<ExpenseStore>(create: (_) => ExpenseStore()),
           ChangeNotifierProvider<AuthService>(
             create: (_) => AuthService(backend: backend),
           ),
@@ -196,15 +191,14 @@ void main() {
     backend.dispose();
   });
 
-  testWidgets('Phone flow sends code then verifies to Dashboard',
-      (tester) async {
+  testWidgets('Phone flow sends code then verifies to Dashboard', (
+    tester,
+  ) async {
     final backend = FakeAuthBackend();
     await tester.pumpWidget(
       MultiProvider(
         providers: [
-          ChangeNotifierProvider<ExpenseStore>(
-            create: (_) => ExpenseStore(),
-          ),
+          ChangeNotifierProvider<ExpenseStore>(create: (_) => ExpenseStore()),
           ChangeNotifierProvider<AuthService>(
             create: (_) => AuthService(backend: backend),
           ),
@@ -254,9 +248,7 @@ void main() {
     await tester.pumpWidget(
       MultiProvider(
         providers: [
-          ChangeNotifierProvider<ExpenseStore>(
-            create: (_) => ExpenseStore(),
-          ),
+          ChangeNotifierProvider<ExpenseStore>(create: (_) => ExpenseStore()),
           ChangeNotifierProvider<AuthService>(
             create: (_) => AuthService(backend: backend),
           ),

@@ -13,12 +13,9 @@ Widget _withAuth(AuthService service, Widget child) {
   return MultiProvider(
     providers: [
       ChangeNotifierProvider<AuthService>.value(value: service),
-      ChangeNotifierProvider<ExpenseStore>(
-        create: (_) => ExpenseStore(),
-      ),
+      ChangeNotifierProvider<ExpenseStore>(create: (_) => ExpenseStore()),
       ChangeNotifierProvider<NotificationService>(
-        create: (_) =>
-            NotificationService(backend: FakeNotificationBackend()),
+        create: (_) => NotificationService(backend: FakeNotificationBackend()),
       ),
       Provider<FirestoreService?>.value(value: null),
     ],
@@ -36,18 +33,14 @@ void main() {
       backend.dispose();
     });
 
-    testWidgets('signed-out user sees Homepage', (tester) async {
+    testWidgets('signed-out user sees Login', (tester) async {
       final backend = FakeAuthBackend();
       final service = AuthService(backend: backend);
       await tester.pumpWidget(_withAuth(service, const AuthGate()));
       await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(
-        find.text('Get started'),
-        500,
-        scrollable: find.byType(Scrollable).first,
-      );
       await tester.pumpAndSettle();
-      expect(find.text('Get started'), findsOneWidget);
+      expect(find.text('Login & Sign Up'), findsOneWidget);
+      expect(find.text('Welcome back'), findsOneWidget);
       backend.dispose();
     });
 
