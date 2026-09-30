@@ -9,8 +9,14 @@ service cloud.firestore {
         allow read: if request.auth != null && request.auth.uid == userId;
         allow create, update: if request.auth != null
           && request.auth.uid == userId
-          && (!('note' in request.resource.data)
-              || request.resource.data.note.size() < 300);
+          && request.resource.data.amount is number
+          && request.resource.data.amount > 0
+          && request.resource.data.categoryId is string
+          && request.resource.data.date is int
+          && request.resource.data.note is string
+          && request.resource.data.note.size() <= 1000
+          && request.resource.data.subcategory is string
+          && request.resource.data.subcategory.size() <= 100;
         allow delete: if request.auth != null && request.auth.uid == userId;
       }
 
