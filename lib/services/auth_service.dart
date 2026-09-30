@@ -87,6 +87,7 @@ abstract class AuthBackend {
   NdohUser? get currentUser;
   Future<NdohUser> signIn(String email, String password);
   Future<NdohUser> signUp(String email, String password, {String? displayName});
+  Future<NdohUser> updateDisplayName(String displayName);
   Future<NdohUser> signInWithGoogle();
   Future<void> startPhoneSignIn({
     required String phone,
@@ -195,6 +196,23 @@ class FirebaseAuthBackend implements AuthBackend {
           'and register this Android app\'s SHA-1 fingerprint.',
         );
       }
+      throw AuthFailure.fromFirebaseCode(e.code);
+    }
+  }
+
+  @override
+  Future<NdohUser> updateDisplayName(String displayName) async {
+    final name = displayName.trim();
+    if (name.isEmpty) throw ArgumentError('Name must not be blank');
+    try {
+      final user = _auth.currentUser;
+      if (user == null) throw StateError('No signed-in user');
+      await user.updateDisplayName(name);
+      await user.reload();
+      final updated = _auth.currentUser;
+      if (updated == null) throw StateError('No signed-in user');
+      return _toUser(updated);
+    } on FirebaseAuthException catch (e) {
       throw AuthFailure.fromFirebaseCode(e.code);
     }
   }
@@ -361,6 +379,14 @@ class AuthService extends ChangeNotifier {
       password,
       displayName: resolved,
     );
+    notifyListeners();
+    return user;
+  }
+
+  Future<NdohUser> updateDisplayName(String displayName) async {
+    final name = displayName.trim();
+    if (name.isEmpty) throw ArgumentError('Name must not be blank');
+    final user = await _backend.updateDisplayName(name);
     notifyListeners();
     return user;
   }

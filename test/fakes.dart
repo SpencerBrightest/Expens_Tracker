@@ -26,9 +26,25 @@ class FakeAuthBackend implements AuthBackend {
   }
 
   @override
-  Future<NdohUser> signUp(String email, String password,
-      {String? displayName}) async {
+  Future<NdohUser> signUp(
+    String email,
+    String password, {
+    String? displayName,
+  }) async {
     _user = NdohUser(uid: 'uid-up', email: email, displayName: displayName);
+    _ctrl.add(_user);
+    return _user!;
+  }
+
+  @override
+  Future<NdohUser> updateDisplayName(String displayName) async {
+    final user = _user;
+    if (user == null) throw StateError('No signed-in user');
+    _user = NdohUser(
+      uid: user.uid,
+      email: user.email,
+      displayName: displayName,
+    );
     _ctrl.add(_user);
     return _user!;
   }

@@ -38,6 +38,17 @@ void main() {
       backend.dispose();
     });
 
+    test('updateDisplayName edits the signed-in profile', () async {
+      final backend = FakeAuthBackend();
+      final service = AuthService(backend: backend);
+      await service.signIn('a@x.com', 'secret123');
+      final updated = await service.updateDisplayName('  Jamila Bright  ');
+
+      expect(updated.displayName, 'Jamila Bright');
+      expect(service.currentUser?.firstName, 'Jamila');
+      backend.dispose();
+    });
+
     test('authStateChanges emits null -> user -> null', () async {
       final backend = FakeAuthBackend();
       final service = AuthService(backend: backend);

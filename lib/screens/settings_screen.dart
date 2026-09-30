@@ -9,6 +9,25 @@ import '../theme/app_colors.dart';
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
+  Future<void> _editProfile(BuildContext context, String currentName) async {
+    try {
+      final name = await showDialog<String>(
+        context: context,
+        builder: (_) => _EditProfileDialog(initialName: currentName),
+      );
+      if (name == null || !context.mounted) return;
+      await context.read<AuthService>().updateDisplayName(name);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Profile updated')));
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not update profile: $error')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final notifications = context.watch<NotificationService>();
@@ -21,9 +40,7 @@ class SettingsScreen extends StatelessWidget {
     final displayName = user?.displayName?.trim().isEmpty ?? true
         ? user?.firstName ?? 'Friend'
         : user!.displayName!.trim();
-    final email = (user?.email ?? '').isEmpty
-        ? 'Signed in'
-        : user!.email;
+    final email = (user?.email ?? '').isEmpty ? 'Signed in' : user!.email;
     return SafeArea(
       child: Center(
         child: ConstrainedBox(
@@ -48,6 +65,7 @@ class SettingsScreen extends StatelessWidget {
                   title: Text(displayName),
                   subtitle: Text(email),
                   trailing: const Icon(Icons.edit_outlined, size: 20),
+                  onTap: () => _editProfile(context, displayName),
                 ),
               ),
               const SizedBox(height: 12),
@@ -83,16 +101,14 @@ class SettingsScreen extends StatelessWidget {
                       title: const Text('Daily Reminder'),
                       subtitle: const Text('Log expenses at 8:00 PM'),
                       value: notifications.dailyReminder,
-                      onChanged: (v) =>
-                          notifications.setDailyReminder(v),
+                      onChanged: (v) => notifications.setDailyReminder(v),
                     ),
                     SwitchListTile(
                       secondary: const Icon(Icons.warning_amber_outlined),
                       title: const Text('Budget Alerts'),
                       subtitle: const Text('Alert at 80% & 100% cap'),
                       value: notifications.budgetAlerts,
-                      onChanged: (v) =>
-                          notifications.setBudgetAlerts(v),
+                      onChanged: (v) => notifications.setBudgetAlerts(v),
                     ),
                   ],
                 ),
@@ -107,9 +123,7 @@ class SettingsScreen extends StatelessWidget {
                   context.read<AuthService>().signOut();
                 },
                 style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.expense.withValues(
-                    alpha: 0.12,
-                  ),
+                  backgroundColor: AppColors.expense.withValues(alpha: 0.12),
                   foregroundColor: AppColors.expenseDeep,
                 ),
                 child: const Text('Log Out'),
@@ -118,6 +132,54 @@ class SettingsScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _EditProfileDialog extends StatefulWidget {
+  const _EditProfileDialog({required this.initialName});
+
+  final String initialName;
+
+  @override
+  State<_EditProfileDialog> createState() => _EditProfileDialogState();
+}
+
+class _EditProfileDialogState extends State<_EditProfileDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialName);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Edit profile'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        textCapitalization: TextCapitalization.words,
+        decoration: const InputDecoration(labelText: 'Display name'),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, _controller.text),
+          child: const Text('Save'),
+        ),
+      ],
     );
   }
 }
