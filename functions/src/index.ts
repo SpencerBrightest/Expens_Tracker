@@ -7,11 +7,12 @@ admin.initializeApp();
 const geminiKey = defineSecret("GEMINI_API_KEY");
 
 const PROMPT =
-  "Rewrite this expense note as a 6-word-max, lowercase, " +
-  "plain expense label. Reply with ONLY the label, no quotes: ";
+  "Write a concise note for this personal expense using only the supplied " +
+  "facts. Summarize the details, preserve names exactly, and do not infer " +
+  "or invent events. Reply with only the note, maximum 12 words:\n";
 
 /**
- * Authenticated Gemini proxy for Ndoh long-note cleanup.
+ * Authenticated Gemini proxy for Ndoh expense-note summaries.
  * Client sends {note}; the Gemini key stays in the Functions secret.
  * Failures fall back to the caller's note so Save never breaks.
  */

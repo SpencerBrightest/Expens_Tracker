@@ -12,9 +12,8 @@ import 'theme/app_theme.dart';
 import 'widgets/auth_gate.dart';
 import 'widgets/splash_gate.dart';
 
-/// Fresh users start with a clean slate: no categories, no expenses.
-/// Categories are created inline from Add/Edit Expense; cloud data loads
-/// via [ExpenseStore.loadFromRemote] on sign-in.
+/// Fresh users start with no expenses; the store seeds five categories on
+/// first sign-in and loads the user's Firestore data.
 ExpenseStore seedStore() => ExpenseStore();
 
 void main() async {
@@ -23,19 +22,20 @@ void main() async {
   final notifications = NotificationService();
   await notifications.init();
   await notifications.setDailyReminder(true);
+  final authService = AuthService();
   runApp(
     NdohApp(
       store: seedStore(),
-      authService: AuthService(),
+      authService: authService,
       notificationService: notifications,
-      // Template-only until the authenticated proxy (functions/
-      // getGeminiSummary) is deployed; then wire:
-      // summaryService: SummaryService(llm: ProxyLlmBackend(
-      //   endpoint: Uri.parse(
-      //       'https://us-central1-expense-tracker-ca5d2.cloudfunctions.net/getGeminiSummary'),
-      //   idTokenProvider: () => authService.getIdToken(),
-      // )),
-      summaryService: SummaryService(),
+      summaryService: SummaryService(
+        llm: ProxyLlmBackend(
+          endpoint: Uri.parse(
+            'https://us-central1-expense-tracker-ca5d2.cloudfunctions.net/getGeminiSummary',
+          ),
+          idTokenProvider: authService.getIdToken,
+        ),
+      ),
     ),
   );
 }

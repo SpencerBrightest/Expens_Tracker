@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 
 import '../models/expense.dart';
 
-/// LLM contract for cleaning long/messy notes. Tests use a fake.
+/// LLM contract for turning expense details into a concise note.
 abstract class LlmBackend {
   Future<String> cleanup(String note);
 }
@@ -59,27 +59,26 @@ class ProxyLlmBackend implements LlmBackend {
   }
 }
 
-/// One-line per-expense summary. Template by default (instant, free);
-/// only long notes route to the LLM. Never throws.
+/// Summarizes subcategory and optional details. Failures use a local template.
 class SummaryService {
-  SummaryService({LlmBackend? llm, this.longNoteThreshold = 120})
-      : _llm = llm ?? const NoopLlmBackend();
+  SummaryService({LlmBackend? llm}) : _llm = llm ?? const NoopLlmBackend();
 
   final LlmBackend _llm;
-  final int longNoteThreshold;
 
   Future<String> summarize({
     required Expense expense,
     required String categoryName,
   }) async {
-    final note = expense.note.trim();
-    if (note.length <= longNoteThreshold) {
-      return expense.effectiveSummary(categoryName);
-    }
+    final source = [
+      'Category: $categoryName',
+      'Subcategory: ${expense.subcategory}',
+      if (expense.note.trim().isNotEmpty) 'Details: ${expense.note.trim()}',
+    ].join('\n');
     try {
-      final cleaned = (await _llm.cleanup(note)).trim();
-      final use = cleaned.isEmpty ? note : cleaned;
-      return expense.copyWith(note: use).effectiveSummary(categoryName);
+      final note = (await _llm.cleanup(source)).trim();
+      return note.isEmpty || note == source
+          ? expense.effectiveSummary(categoryName)
+          : note;
     } catch (_) {
       return expense.effectiveSummary(categoryName);
     }

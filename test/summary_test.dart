@@ -22,10 +22,12 @@ class FakeLlm implements LlmBackend {
   final String cleaned;
   final bool shouldThrow;
   var calls = 0;
+  String? input;
 
   @override
   Future<String> cleanup(String note) async {
     calls++;
+    input = note;
     if (shouldThrow) throw StateError('llm down');
     return cleaned;
   }
@@ -41,15 +43,18 @@ Expense _exp(String note) => Expense(
 
 void main() {
   group('SummaryService', () {
-    test('short note uses template without calling the LLM', () async {
+    test('summarizes short details with the subcategory context', () async {
       final llm = FakeLlm();
       final service = SummaryService(llm: llm);
       final summary = await service.summarize(
-        expense: _exp('moto to school'),
+        expense: _exp('moto to school').copyWith(subcategory: 'Jamila'),
         categoryName: 'Transport',
       );
-      expect(summary, '5000 XAF — Transport, moto to school');
-      expect(llm.calls, 0);
+      expect(summary, 'cleaned note');
+      expect(llm.calls, 1);
+      expect(llm.input, contains('Category: Transport'));
+      expect(llm.input, contains('Subcategory: Jamila'));
+      expect(llm.input, contains('Details: moto to school'));
     });
 
     test('long note routes to the LLM', () async {
@@ -60,7 +65,7 @@ void main() {
         categoryName: 'Food',
       );
       expect(llm.calls, 1);
-      expect(summary, '5000 XAF — Food, bulk grocery restock');
+      expect(summary, 'bulk grocery restock');
     });
 
     test('LLM failure falls back to template', () async {
@@ -72,6 +77,17 @@ void main() {
         categoryName: 'Food',
       );
       expect(summary, '5000 XAF — Food, $note');
+    });
+
+    test('pass-through backend uses readable local template', () async {
+      final service = SummaryService();
+      expect(
+        await service.summarize(
+          expense: _exp('').copyWith(subcategory: 'Jamila'),
+          categoryName: 'Personal',
+        ),
+        '5000 XAF — Personal, Jamila',
+      );
     });
 
     group('Proxy HTTP transport (mocked)', () {
@@ -174,6 +190,7 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(TextField).last, 'x' * 150);
+      await tester.enterText(find.byType(TextField).at(1), 'Groceries');
       await tester.pump();
       final saveBtn = find.text('Save Expense');
       await tester.scrollUntilVisible(
@@ -183,11 +200,12 @@ void main() {
       );
       await tester.pumpAndSettle();
       await tester.tap(saveBtn);
+      await tester.pump();
       await tester.pumpAndSettle();
 
       expect(llm.calls, 1);
       expect(store.expenses, hasLength(1));
-      expect(store.expenses.first.summary, '5000 XAF — Food, cleaned note');
+      expect(store.expenses.first.summary, 'cleaned note');
     });
   });
 }
