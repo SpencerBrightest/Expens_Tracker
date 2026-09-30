@@ -7,33 +7,23 @@ import 'package:flutter_test/flutter_test.dart';
 ExpenseStore _store({
   List<Category> categories = const [],
   List<Expense> expenses = const [],
-}) =>
-    ExpenseStore(categories: categories, expenses: expenses);
+}) => ExpenseStore(categories: categories, expenses: expenses);
 
 Category _cat(String id, String name, double limit) => Category(
-      id: id,
-      name: name,
-      monthlyLimit: limit,
-      colorValue: 0xFF2D68FE,
-      iconCodePoint: 0xe318,
-    );
+  id: id,
+  name: name,
+  monthlyLimit: limit,
+  colorValue: 0xFF2D68FE,
+  iconCodePoint: 0xe318,
+);
 
 Expense _exp(String id, String catId, double amount, DateTime date) =>
-    Expense(
-      id: id,
-      amount: amount,
-      categoryId: catId,
-      note: 'n',
-      date: date,
-    );
+    Expense(id: id, amount: amount, categoryId: catId, note: 'n', date: date);
 
 void main() {
   group('buildInsight', () {
     test('empty store prompts first expense', () {
-      expect(
-        buildInsight(_store()),
-        contains('first expense'),
-      );
+      expect(buildInsight(_store()), contains('first expense'));
     });
 
     test('over-budget category takes priority', () {

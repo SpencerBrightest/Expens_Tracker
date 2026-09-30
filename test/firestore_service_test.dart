@@ -5,28 +5,25 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Expense _exp(String id, double amount, DateTime date) => Expense(
-      id: id,
-      amount: amount,
-      categoryId: 'c1',
-      note: 'note $id',
-      date: date,
-    );
+  id: id,
+  amount: amount,
+  categoryId: 'c1',
+  note: 'note $id',
+  date: date,
+);
 
 Category _cat(String id) => Category(
-      id: id,
-      name: 'Name $id',
-      monthlyLimit: 1000,
-      colorValue: 0xFF2D68FE,
-      iconCodePoint: 0xe318,
-    );
+  id: id,
+  name: 'Name $id',
+  monthlyLimit: 1000,
+  colorValue: 0xFF2D68FE,
+  iconCodePoint: 0xe318,
+);
 
 void main() {
   group('FirestoreService expenses', () {
     test('save + watch round-trips newest-first', () async {
-      final svc = FirestoreService(
-        db: FakeFirebaseFirestore(),
-        uid: 'u1',
-      );
+      final svc = FirestoreService(db: FakeFirebaseFirestore(), uid: 'u1');
       await svc.saveExpense(_exp('e1', 100, DateTime(2024, 11, 1)));
       await svc.saveExpense(_exp('e2', 200, DateTime(2024, 11, 2)));
 
@@ -47,10 +44,7 @@ void main() {
     });
 
     test('saveExpense overwrites the same id', () async {
-      final svc = FirestoreService(
-        db: FakeFirebaseFirestore(),
-        uid: 'u1',
-      );
+      final svc = FirestoreService(db: FakeFirebaseFirestore(), uid: 'u1');
       await svc.saveExpense(_exp('e1', 100, DateTime(2024, 11, 1)));
       await svc.saveExpense(_exp('e1', 400, DateTime(2024, 11, 1)));
       final list = await svc.watchExpenses().first;
@@ -59,44 +53,27 @@ void main() {
     });
 
     test('deleteExpense removes the doc', () async {
-      final svc = FirestoreService(
-        db: FakeFirebaseFirestore(),
-        uid: 'u1',
-      );
+      final svc = FirestoreService(db: FakeFirebaseFirestore(), uid: 'u1');
       await svc.saveExpense(_exp('e1', 100, DateTime(2024, 11, 1)));
       await svc.deleteExpense('e1');
       expect(await svc.watchExpenses().first, isEmpty);
     });
 
     test('fetchExpensesPage paginates with limit/startAfter', () async {
-      final svc = FirestoreService(
-        db: FakeFirebaseFirestore(),
-        uid: 'u1',
-      );
+      final svc = FirestoreService(db: FakeFirebaseFirestore(), uid: 'u1');
       for (var i = 1; i <= 5; i++) {
-        await svc.saveExpense(
-          _exp('e$i', i * 10.0, DateTime(2024, 11, i)),
-        );
+        await svc.saveExpense(_exp('e$i', i * 10.0, DateTime(2024, 11, i)));
       }
       final p1 = await svc.fetchExpensesPage(limit: 2);
       expect(p1.expenses.map((e) => e.id).toList(), ['e5', 'e4']);
 
-      final p2 = await svc.fetchExpensesPage(
-        limit: 2,
-        startAfter: p1.lastDoc,
-      );
+      final p2 = await svc.fetchExpensesPage(limit: 2, startAfter: p1.lastDoc);
       expect(p2.expenses.map((e) => e.id).toList(), ['e3', 'e2']);
 
-      final p3 = await svc.fetchExpensesPage(
-        limit: 2,
-        startAfter: p2.lastDoc,
-      );
+      final p3 = await svc.fetchExpensesPage(limit: 2, startAfter: p2.lastDoc);
       expect(p3.expenses.map((e) => e.id).toList(), ['e1']);
 
-      final p4 = await svc.fetchExpensesPage(
-        limit: 2,
-        startAfter: p3.lastDoc,
-      );
+      final p4 = await svc.fetchExpensesPage(limit: 2, startAfter: p3.lastDoc);
       expect(p4.expenses, isEmpty);
       expect(p4.lastDoc, isNull);
     });
@@ -117,10 +94,7 @@ void main() {
     });
 
     test('deleteCategory removes the doc', () async {
-      final svc = FirestoreService(
-        db: FakeFirebaseFirestore(),
-        uid: 'u1',
-      );
+      final svc = FirestoreService(db: FakeFirebaseFirestore(), uid: 'u1');
       await svc.saveCategory(_cat('c1'));
       await svc.deleteCategory('c1');
       expect(await svc.watchCategories().first, isEmpty);

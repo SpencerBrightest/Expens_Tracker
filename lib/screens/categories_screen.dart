@@ -26,10 +26,7 @@ class CategoriesScreen extends StatelessWidget {
             children: [
               const Text(
                 'Categories',
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
               ),
               const Text(
                 'Monthly budget allocations and tracking',
@@ -94,8 +91,7 @@ class CategoriesScreen extends StatelessWidget {
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     c.name,
@@ -128,8 +124,7 @@ class CategoriesScreen extends StatelessWidget {
                             value: pct,
                             minHeight: 8,
                             backgroundColor: AppColors.surfaceContainer,
-                            valueColor:
-                                AlwaysStoppedAnimation(color),
+                            valueColor: AlwaysStoppedAnimation(color),
                           ),
                         ),
                       ],

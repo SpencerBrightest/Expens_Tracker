@@ -72,8 +72,7 @@ class SpendingPieChart extends StatelessWidget {
                   sectionsSpace: 2,
                   sections: List.generate(entries.length, (i) {
                     final amount = entries[i].value;
-                    final share =
-                        total > 0 ? amount / total : 0.0;
+                    final share = total > 0 ? amount / total : 0.0;
                     return PieChartSectionData(
                       value: amount,
                       color: _colors[i % _colors.length],
@@ -96,9 +95,7 @@ class SpendingPieChart extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      showPercentage
-                          ? '100%'
-                          : xafFormat.format(total),
+                      showPercentage ? '100%' : xafFormat.format(total),
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,

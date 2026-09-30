@@ -26,7 +26,7 @@ abstract class NotificationBackend {
 
 class PluginNotificationBackend implements NotificationBackend {
   PluginNotificationBackend([FlutterLocalNotificationsPlugin? plugin])
-      : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
+    : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
 
   static const _channelId = 'ndoh_reminders';
 
@@ -43,7 +43,8 @@ class PluginNotificationBackend implements NotificationBackend {
     try {
       await _plugin
           .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>()
+            AndroidFlutterLocalNotificationsPlugin
+          >()
           ?.requestNotificationsPermission();
     } catch (_) {
       // Non-Android or older API: permission not required.
@@ -108,7 +109,7 @@ class PluginNotificationBackend implements NotificationBackend {
 /// Screens use this — never the plugin directly.
 class NotificationService extends ChangeNotifier {
   NotificationService({NotificationBackend? backend})
-      : _backend = backend ?? PluginNotificationBackend();
+    : _backend = backend ?? PluginNotificationBackend();
 
   static const dailyReminderId = 1;
   static const budgetExceededId = 2;

@@ -52,14 +52,7 @@ const Map<String, List<String>> _keywords = {
     'clinic',
     'medicine',
   ],
-  'shopping': [
-    'shopping',
-    'clothes',
-    'shoes',
-    'store',
-    'mall',
-    'boutique',
-  ],
+  'shopping': ['shopping', 'clothes', 'shoes', 'store', 'mall', 'boutique'],
   'bills': ['bill', 'electric', 'water', 'utility', 'internet', 'phone'],
 };
 

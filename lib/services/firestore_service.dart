@@ -18,25 +18,19 @@ class ExpensePage {
 /// Screens/widgets must use this — never import cloud_firestore directly.
 class FirestoreService {
   FirestoreService({FirebaseFirestore? db, required this.uid})
-      : _db = db ?? FirebaseFirestore.instance;
+    : _db = db ?? FirebaseFirestore.instance;
 
   final FirebaseFirestore _db;
   final String uid;
 
-  CollectionReference<Map<String, dynamic>> get _expenses => _db
-      .collection('users')
-      .doc(uid)
-      .collection('expenses');
+  CollectionReference<Map<String, dynamic>> get _expenses =>
+      _db.collection('users').doc(uid).collection('expenses');
 
-  CollectionReference<Map<String, dynamic>> get _categories => _db
-      .collection('users')
-      .doc(uid)
-      .collection('categories');
+  CollectionReference<Map<String, dynamic>> get _categories =>
+      _db.collection('users').doc(uid).collection('categories');
 
   static List<Expense> _expenseList(QuerySnapshot<Map<String, dynamic>> snap) {
-    return snap.docs
-        .map((d) => Expense.fromMap(d.id, d.data()))
-        .toList();
+    return snap.docs.map((d) => Expense.fromMap(d.id, d.data())).toList();
   }
 
   Query<Map<String, dynamic>> _orderedExpenses({int? limit}) {
@@ -47,9 +41,7 @@ class FirestoreService {
 
   /// Live expense list, newest-first.
   Stream<List<Expense>> watchExpenses({int limit = 50}) {
-    return _orderedExpenses(limit: limit)
-        .snapshots()
-        .map(_expenseList);
+    return _orderedExpenses(limit: limit).snapshots().map(_expenseList);
   }
 
   /// One page of expenses for `limit()/startAfter()` pagination.
@@ -80,10 +72,8 @@ class FirestoreService {
 
   Stream<List<Category>> watchCategories() {
     return _categories.snapshots().map(
-          (snap) => snap.docs
-              .map((d) => Category.fromMap(d.id, d.data()))
-              .toList(),
-        );
+      (snap) => snap.docs.map((d) => Category.fromMap(d.id, d.data())).toList(),
+    );
   }
 
   Future<void> saveCategory(Category category) {

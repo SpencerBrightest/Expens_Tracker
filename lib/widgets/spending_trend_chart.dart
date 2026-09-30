@@ -16,9 +16,9 @@ class SpendingTrendChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final values = context.watch<ExpenseStore>().monthlyTotals(
-          months: months,
-          reference: reference,
-        );
+      months: months,
+      reference: reference,
+    );
     final maxV = values.fold(0.0, (m, v) => v > m ? v : m);
     return SizedBox(
       height: 180,

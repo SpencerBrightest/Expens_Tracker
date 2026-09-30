@@ -91,10 +91,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
             children: [
               const Text(
                 'History',
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 12),
               const TextField(
@@ -119,9 +116,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                     ),
                   ),
                   title: Text(xafFormat.format(store.totalSpent)),
-                  subtitle: Text(
-                    'spent • ${expenses.length} transactions',
-                  ),
+                  subtitle: Text('spent • ${expenses.length} transactions'),
                 ),
               ),
               const SizedBox(height: 12),

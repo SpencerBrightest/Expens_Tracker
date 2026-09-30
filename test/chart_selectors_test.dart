@@ -4,21 +4,15 @@ import 'package:expense_tracker/providers/expense_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Category _cat(String id) => Category(
-      id: id,
-      name: 'Name $id',
-      monthlyLimit: 1000,
-      colorValue: 0xFF2D68FE,
-      iconCodePoint: 0xe318,
-    );
+  id: id,
+  name: 'Name $id',
+  monthlyLimit: 1000,
+  colorValue: 0xFF2D68FE,
+  iconCodePoint: 0xe318,
+);
 
 Expense _exp(String id, String catId, double amount, DateTime date) =>
-    Expense(
-      id: id,
-      amount: amount,
-      categoryId: catId,
-      note: 'n',
-      date: date,
-    );
+    Expense(id: id, amount: amount, categoryId: catId, note: 'n', date: date);
 
 void main() {
   group('ExpenseStore chart selectors', () {

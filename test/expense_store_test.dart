@@ -4,12 +4,12 @@ import 'package:expense_tracker/providers/expense_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Category _cat(String id, String name) => Category(
-      id: id,
-      name: name,
-      monthlyLimit: 1000,
-      colorValue: 0xFF2D68FE,
-      iconCodePoint: 0xe318,
-    );
+  id: id,
+  name: name,
+  monthlyLimit: 1000,
+  colorValue: 0xFF2D68FE,
+  iconCodePoint: 0xe318,
+);
 
 Expense _exp(String id, String catId, double amount, [DateTime? createdAt]) =>
     Expense(
@@ -44,10 +44,7 @@ void main() {
       expect(store.shareOfTotal('c1'), closeTo(150 / 450, 1e-9));
       expect(store.shareOfTotal('c2'), closeTo(300 / 450, 1e-9));
       final shares = store.sharesByCategory();
-      expect(
-        shares.values.fold(0.0, (s, v) => s + v),
-        closeTo(1.0, 1e-9),
-      );
+      expect(shares.values.fold(0.0, (s, v) => s + v), closeTo(1.0, 1e-9));
     });
 
     test('addExpense inserts newest-first and notifies', () {
@@ -66,10 +63,14 @@ void main() {
     test('addExpense rejects duplicate id and unknown category', () {
       final store = ExpenseStore(categories: [_cat('c1', 'Food')]);
       store.addExpense(_exp('e1', 'c1', 100));
-      expect(() => store.addExpense(_exp('e1', 'c1', 200)),
-          throwsArgumentError);
-      expect(() => store.addExpense(_exp('e9', 'nope', 200)),
-          throwsArgumentError);
+      expect(
+        () => store.addExpense(_exp('e1', 'c1', 200)),
+        throwsArgumentError,
+      );
+      expect(
+        () => store.addExpense(_exp('e9', 'nope', 200)),
+        throwsArgumentError,
+      );
     });
 
     test('updateExpense replaces and notifies', () {
@@ -81,8 +82,10 @@ void main() {
       store.updateExpense(_exp('e1', 'c1', 400));
       expect(store.totalSpent, 400);
       expect(notified, 1);
-      expect(() => store.updateExpense(_exp('zz', 'c1', 5)),
-          throwsArgumentError);
+      expect(
+        () => store.updateExpense(_exp('zz', 'c1', 5)),
+        throwsArgumentError,
+      );
     });
 
     test('removeExpense deletes and notifies', () {
@@ -117,8 +120,7 @@ void main() {
       store.addCategory(_cat('c1', 'Food'));
       expect(store.categories.map((c) => c.id), ['c1']);
       expect(notified, 1);
-      expect(() => store.addCategory(_cat('c1', 'Food')),
-          throwsArgumentError);
+      expect(() => store.addCategory(_cat('c1', 'Food')), throwsArgumentError);
     });
 
     test('totalByCategory sums only that category', () {
