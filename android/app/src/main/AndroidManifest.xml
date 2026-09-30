@@ -2,9 +2,9 @@
     <!-- Daily reminders + budget alerts (runtime request on API 33+). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
-        android:label="expense_tracker"
+        android:label="Ndoh"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/launcher_icon">
         <activity
             android:name=".MainActivity"
             android:exported="true"
