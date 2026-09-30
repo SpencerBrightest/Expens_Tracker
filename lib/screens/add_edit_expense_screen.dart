@@ -247,6 +247,7 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
               const SizedBox(height: 12),
               TextField(
                 controller: _subcategory,
+                maxLength: 100,
                 textCapitalization: TextCapitalization.sentences,
                 decoration: const InputDecoration(
                   labelText: 'Subcategory',
@@ -256,6 +257,7 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
               const SizedBox(height: 12),
               TextField(
                 controller: _note,
+                maxLength: 1000,
                 decoration: const InputDecoration(
                   labelText: 'Details for AI note (optional)',
                   hintText: 'Add context to summarize',

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/user_preferences.dart';
 import '../providers/expense_store.dart';
+import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
+import '../services/notification_service.dart';
 import '../theme/app_colors.dart';
 import 'add_edit_expense_screen.dart';
 import 'analytics_screen.dart';
@@ -29,10 +32,50 @@ class _DashboardShellState extends State<DashboardShell> {
     Future.microtask(() {
       if (!mounted) return;
       final svc = context.read<FirestoreService?>();
-      if (svc != null) {
-        context.read<ExpenseStore>().loadFromRemote(svc).ignore();
-      }
+      final user = context.read<AuthService>().currentUser;
+      if (svc == null || user == null) return;
+      _loadAccountData(
+        svc,
+        user,
+        context.read<ExpenseStore>(),
+        context.read<NotificationService>(),
+      ).ignore();
     });
+  }
+
+  Future<void> _loadAccountData(
+    FirestoreService service,
+    NdohUser user,
+    ExpenseStore store,
+    NotificationService notifications,
+  ) async {
+    final storeLoad = store.loadFromRemote(service);
+    try {
+      await service.saveUserProfile(
+        email: user.email,
+        displayName: user.displayName,
+      );
+    } catch (_) {}
+    UserPreferences? preferences;
+    try {
+      preferences = await service.loadUserPreferences();
+    } catch (_) {}
+    if (preferences == null) {
+      try {
+        await service.saveUserPreferences(
+          UserPreferences(
+            dailyReminder: notifications.dailyReminder,
+            budgetAlerts: notifications.budgetAlerts,
+          ),
+        );
+      } catch (_) {}
+    } else {
+      try {
+        await notifications.setDailyReminder(preferences.dailyReminder);
+      } catch (_) {}
+      notifications.setBudgetAlerts(preferences.budgetAlerts);
+    }
+    await storeLoad;
   }
 
   static const _tabs = [

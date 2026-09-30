@@ -21,7 +21,6 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   final notifications = NotificationService();
   await notifications.init();
-  await notifications.setDailyReminder(true);
   final authService = AuthService();
   runApp(
     NdohApp(

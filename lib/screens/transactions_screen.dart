@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -23,7 +22,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   static const _pageSize = 20;
 
   List<Expense>? _remote;
-  DocumentSnapshot<Map<String, dynamic>>? _cursor;
+  ExpenseCursor? _cursor;
   bool _loading = true;
   bool _loadingMore = false;
   bool _done = false;

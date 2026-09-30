@@ -5,6 +5,7 @@ import 'package:expense_tracker/screens/auth_screen.dart';
 import 'package:expense_tracker/screens/dashboard_shell.dart';
 import 'package:expense_tracker/screens/homepage_screen.dart';
 import 'package:expense_tracker/screens/splash_screen.dart';
+import 'package:expense_tracker/screens/settings_screen.dart';
 import 'package:expense_tracker/services/auth_service.dart';
 import 'package:expense_tracker/services/firestore_service.dart';
 import 'package:expense_tracker/services/notification_service.dart';
@@ -12,6 +13,7 @@ import 'package:expense_tracker/theme/app_theme.dart';
 import 'package:expense_tracker/widgets/auth_gate.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:provider/provider.dart';
 
 import 'fakes.dart';
@@ -281,5 +283,83 @@ void main() {
     expect(find.text('Analytics'), findsOneWidget);
     expect(find.text('Settings'), findsOneWidget);
     expect(find.byType(FloatingActionButton), findsOneWidget);
+  });
+
+  testWidgets('Dashboard syncs user profile, preferences, and categories', (
+    tester,
+  ) async {
+    final backend = FakeAuthBackend();
+    await backend.signIn('jamila@example.com', 'secret123');
+    final auth = AuthService(backend: backend);
+    final db = FakeFirebaseFirestore();
+    final firestore = FirestoreService(db: db, uid: 'uid-in');
+    final notifications = NotificationService(
+      backend: FakeNotificationBackend(),
+    );
+    final store = ExpenseStore();
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<ExpenseStore>.value(value: store),
+          ChangeNotifierProvider<AuthService>.value(value: auth),
+          ChangeNotifierProvider<NotificationService>.value(
+            value: notifications,
+          ),
+          Provider<FirestoreService?>.value(value: firestore),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light(),
+          home: const DashboardShell(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final profile = await db.collection('users').doc('uid-in').get();
+    expect(profile.data()!['email'], 'jamila@example.com');
+    expect(profile.data()!['uid'], 'uid-in');
+    expect(profile.data()!['preferences'], {
+      'dailyReminder': false,
+      'budgetAlerts': true,
+    });
+    expect(store.categories, hasLength(5));
+    expect(await firestore.watchCategories().first, hasLength(5));
+    backend.dispose();
+  });
+
+  testWidgets('Settings persists notification preferences', (tester) async {
+    final db = FakeFirebaseFirestore();
+    final firestore = FirestoreService(db: db, uid: 'uid-settings');
+    final notifications = NotificationService(
+      backend: FakeNotificationBackend(),
+    );
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<ExpenseStore>(create: (_) => ExpenseStore()),
+          ChangeNotifierProvider<AuthService>(
+            create: (_) => AuthService(backend: FakeAuthBackend()),
+          ),
+          ChangeNotifierProvider<NotificationService>.value(
+            value: notifications,
+          ),
+          Provider<FirestoreService?>.value(value: firestore),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light(),
+          home: const Scaffold(body: SettingsScreen()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(Switch).first);
+    await tester.pumpAndSettle();
+
+    final profile = await db.collection('users').doc('uid-settings').get();
+    expect(profile.data()!['preferences'], {
+      'dailyReminder': true,
+      'budgetAlerts': true,
+    });
   });
 }
