@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../models/category.dart';
 import '../theme/app_colors.dart';
 
 /// Phase 1 static dummy data. Converted from Stitch USD mock values to XAF.
@@ -88,6 +89,44 @@ const dummyCategories = <DummyCategory>[
     color: AppColors.amber,
     spent: 490,
     limit: 600,
+  ),
+];
+
+final starterCategories = <Category>[
+  Category(
+    id: 'home',
+    name: 'Home',
+    monthlyLimit: 0,
+    colorValue: AppColors.primary.toARGB32(),
+    iconCodePoint: Icons.home_outlined.codePoint,
+  ),
+  Category(
+    id: 'food',
+    name: 'Food',
+    monthlyLimit: 0,
+    colorValue: AppColors.expense.toARGB32(),
+    iconCodePoint: Icons.restaurant_outlined.codePoint,
+  ),
+  Category(
+    id: 'transport',
+    name: 'Transport',
+    monthlyLimit: 0,
+    colorValue: AppColors.sky.toARGB32(),
+    iconCodePoint: Icons.directions_car_outlined.codePoint,
+  ),
+  Category(
+    id: 'bills',
+    name: 'Bills',
+    monthlyLimit: 0,
+    colorValue: AppColors.amber.toARGB32(),
+    iconCodePoint: Icons.receipt_long_outlined.codePoint,
+  ),
+  Category(
+    id: 'personal',
+    name: 'Personal',
+    monthlyLimit: 0,
+    colorValue: AppColors.success.toARGB32(),
+    iconCodePoint: Icons.person_outline.codePoint,
   ),
 ];
 

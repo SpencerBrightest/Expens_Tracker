@@ -6,25 +6,24 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Category _cat(String id) => Category(
-      id: id,
-      name: 'Name $id',
-      monthlyLimit: 1000,
-      colorValue: 0xFF2D68FE,
-      iconCodePoint: 0xe318,
-    );
+  id: id,
+  name: 'Name $id',
+  monthlyLimit: 1000,
+  colorValue: 0xFF2D68FE,
+  iconCodePoint: 0xe318,
+);
 
 Expense _exp(String id, double amount) => Expense(
-      id: id,
-      amount: amount,
-      categoryId: 'c1',
-      note: 'n',
-      date: DateTime(2024, 11, 20),
-    );
+  id: id,
+  amount: amount,
+  categoryId: 'c1',
+  note: 'n',
+  date: DateTime(2024, 11, 20),
+);
 
 /// Test-only failing service: proves rollback without a backend.
 class _FailingService extends FirestoreService {
-  _FailingService()
-      : super(db: FakeFirebaseFirestore(), uid: 'u-fail');
+  _FailingService() : super(db: FakeFirebaseFirestore(), uid: 'u-fail');
 
   @override
   Future<void> saveExpense(Expense expense) {
@@ -35,10 +34,7 @@ class _FailingService extends FirestoreService {
 void main() {
   group('ExpenseStore remote sync', () {
     test('loadFromRemote pulls expenses and categories', () async {
-      final svc = FirestoreService(
-        db: FakeFirebaseFirestore(),
-        uid: 'u1',
-      );
+      final svc = FirestoreService(db: FakeFirebaseFirestore(), uid: 'u1');
       await svc.saveCategory(_cat('c1'));
       await svc.saveExpense(_exp('e1', 100));
 
@@ -49,23 +45,31 @@ void main() {
       expect(store.categories.map((c) => c.id), ['c1']);
     });
 
+    test('first sign-in seeds five default categories remotely', () async {
+      final svc = FirestoreService(db: FakeFirebaseFirestore(), uid: 'u-empty');
+      final store = ExpenseStore();
+      await store.loadFromRemote(svc);
+
+      expect(store.categories.map((c) => c.name), [
+        'Home',
+        'Food',
+        'Transport',
+        'Bills',
+        'Personal',
+      ]);
+      expect(await svc.watchCategories().first, hasLength(5));
+    });
+
     test('persistExpense syncs local and remote', () async {
-      final svc = FirestoreService(
-        db: FakeFirebaseFirestore(),
-        uid: 'u1',
-      );
+      final svc = FirestoreService(db: FakeFirebaseFirestore(), uid: 'u1');
       final store = ExpenseStore(categories: [_cat('c1')]);
       await store.persistExpense(svc, _exp('e1', 250));
 
       expect(store.expenses.map((e) => e.id), ['e1']);
-      expect(
-        (await svc.watchExpenses().first).map((e) => e.id),
-        ['e1'],
-      );
+      expect((await svc.watchExpenses().first).map((e) => e.id), ['e1']);
     });
 
-    test('persistExpense rolls back locally when remote fails',
-        () async {
+    test('persistExpense rolls back locally when remote fails', () async {
       final store = ExpenseStore(categories: [_cat('c1')]);
       await expectLater(
         store.persistExpense(_FailingService(), _exp('e1', 250)),
@@ -75,10 +79,7 @@ void main() {
     });
 
     test('deleteExpenseRemote removes local and remote', () async {
-      final svc = FirestoreService(
-        db: FakeFirebaseFirestore(),
-        uid: 'u1',
-      );
+      final svc = FirestoreService(db: FakeFirebaseFirestore(), uid: 'u1');
       final store = ExpenseStore(categories: [_cat('c1')]);
       await store.persistExpense(svc, _exp('e1', 250));
       await store.deleteExpenseRemote(svc, 'e1');

@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 import '../ai/category_suggest.dart';
 import '../ai/summary.dart';
 import '../data/dummy_data.dart';
-import '../models/category.dart';
 import '../models/expense.dart';
 import '../providers/expense_store.dart';
 import '../services/firestore_service.dart';
@@ -27,7 +26,7 @@ class AddEditExpenseScreen extends StatefulWidget {
 class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
   late final TextEditingController _amount;
   late final TextEditingController _note;
-  late final TextEditingController _newCategory;
+  late final TextEditingController _subcategory;
   String? _categoryId;
   String? _suggestedId;
   Timer? _debounce;
@@ -40,7 +39,9 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
       text: widget.expense?.amount.toInt().toString() ?? '5000',
     );
     _note = TextEditingController(text: widget.expense?.note ?? '');
-    _newCategory = TextEditingController();
+    _subcategory = TextEditingController(
+      text: widget.expense?.subcategory ?? widget.expense?.note ?? '',
+    );
     _categoryId = widget.expense?.categoryId;
     _note.addListener(_onNoteChanged);
   }
@@ -64,7 +65,7 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
     _note.removeListener(_onNoteChanged);
     _amount.dispose();
     _note.dispose();
-    _newCategory.dispose();
+    _subcategory.dispose();
     super.dispose();
   }
 
@@ -79,35 +80,31 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
       return;
     }
     final categories = store.categories;
-    // No silent dead-end: with no categories yet, create one inline from
-    // the "New category" field.
-    String categoryId;
-    if (categories.isEmpty) {
-      final name = _newCategory.text.trim();
-      if (name.isEmpty) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Name a category first')));
-        return;
-      }
-      final created = Category(
-        id: 'c${DateTime.now().microsecondsSinceEpoch}',
-        name: name,
-        monthlyLimit: 0,
-        colorValue: 0xFF2D68FE,
-        iconCodePoint: 0xe318,
+    final options = categories.isEmpty ? starterCategories : categories;
+    final category = options.firstWhere(
+      (item) => item.id == (_categoryId ?? options.first.id),
+      orElse: () => options.first,
+    );
+    if (_subcategory.text.trim().isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Enter a subcategory')),
       );
+      return;
+    }
+    if (categories.isEmpty) {
       try {
-        store.addCategory(created);
-        await service.saveCategory(created);
+        for (final starter in starterCategories) {
+          store.addCategory(starter);
+          await service.saveCategory(starter);
+        }
       } catch (e) {
         if (!mounted) return;
         messenger.showSnackBar(SnackBar(content: Text('Could not save: $e')));
         return;
       }
-      categoryId = created.id;
-    } else {
-      categoryId = _categoryId ?? categories.first.id;
+    } else if (categories.every((item) => item.id != category.id)) {
+      store.addCategory(category);
+      await service.saveCategory(category);
     }
     final amount = double.tryParse(_amount.text.trim()) ?? 0;
     if (amount <= 0) {
@@ -119,8 +116,9 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
     final expense = Expense(
       id: widget.expense?.id ?? 'e${DateTime.now().microsecondsSinceEpoch}',
       amount: amount,
-      categoryId: categoryId,
+      categoryId: category.id,
       note: _note.text.trim(),
+      subcategory: _subcategory.text.trim(),
       date: widget.expense?.date ?? DateTime.now(),
       paymentMethod: widget.expense?.paymentMethod ?? 'Cash',
     );
@@ -134,7 +132,7 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
           .read<NotificationService>()
           .budgetAlertIfNeeded(
             categoryName: cat.name,
-            spent: store.totalByCategory(categoryId),
+            spent: store.totalByCategory(category.id),
             limit: cat.monthlyLimit,
           )
           .ignore();
@@ -160,7 +158,7 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
   ) {
     final store = context.read<ExpenseStore>();
     final summarizer = context.read<SummaryService>();
-    Future(() async {
+    (() async {
       try {
         final summary = await summarizer.summarize(
           expense: expense,
@@ -176,7 +174,7 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
       } catch (_) {
         // Never let AI break the app.
       }
-    }).ignore();
+    })().ignore();
   }
 
   @override
@@ -236,32 +234,31 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
                 }).toList(),
               ),
               const SizedBox(height: 12),
-              if (categories.isEmpty)
-                TextField(
-                  controller: _newCategory,
-                  decoration: const InputDecoration(
-                    labelText: 'New category',
-                    hintText: 'e.g. Transport',
-                  ),
-                )
-              else
-                DropdownButtonFormField<String>(
-                  initialValue: selected,
-                  decoration: const InputDecoration(labelText: 'Category'),
-                  items: categories
-                      .map(
-                        (c) =>
-                            DropdownMenuItem(value: c.id, child: Text(c.name)),
-                      )
-                      .toList(),
-                  onChanged: (v) => setState(() => _categoryId = v),
+              DropdownButtonFormField<String>(
+                initialValue: selected ?? starterCategories.first.id,
+                decoration: const InputDecoration(labelText: 'Category'),
+                items: (categories.isEmpty ? starterCategories : categories)
+                    .map(
+                      (c) => DropdownMenuItem(value: c.id, child: Text(c.name)),
+                    )
+                    .toList(),
+                onChanged: (v) => setState(() => _categoryId = v),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _subcategory,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: const InputDecoration(
+                  labelText: 'Subcategory',
+                  hintText: 'e.g. Rent, Jamila, Electricity',
                 ),
+              ),
               const SizedBox(height: 12),
               TextField(
                 controller: _note,
                 decoration: const InputDecoration(
-                  labelText: 'Note / Merchant',
-                  hintText: 'e.g. moto to school',
+                  labelText: 'Details for AI note (optional)',
+                  hintText: 'Add context to summarize',
                 ),
               ),
               Builder(
