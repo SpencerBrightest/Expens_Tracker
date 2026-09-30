@@ -32,8 +32,13 @@ class ExpenseTile extends StatelessWidget {
     final cat = store.categoryFor(expense);
     final date = DateFormat('MMM d, y').format(expense.date);
     return ExpenseTile(
-      title: expense.note,
-      subtitle: '${cat.name} • $date',
+      title: expense.subcategory.isEmpty ? expense.note : expense.subcategory,
+      subtitle: [
+        cat.name,
+        if (expense.summary?.trim().isNotEmpty ?? false)
+          expense.summary!.trim(),
+        date,
+      ].join(' • '),
       amountLabel: xafFormat.format(expense.amount),
       isIncome: false,
       icon: categoryIcon(cat.iconCodePoint),
@@ -46,10 +51,7 @@ class ExpenseTile extends StatelessWidget {
     return Card(
       margin: EdgeInsets.zero,
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 4,
-        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
         leading: Container(
           width: 44,
           height: 44,
@@ -59,16 +61,10 @@ class ExpenseTile extends StatelessWidget {
           ),
           child: Icon(icon, color: color),
         ),
-        title: Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(
           subtitle,
-          style: const TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 12,
-          ),
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
         ),
         trailing: Text(
           amountLabel,
