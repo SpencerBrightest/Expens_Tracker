@@ -8,6 +8,7 @@ import 'package:expense_tracker/screens/add_edit_expense_screen.dart';
 import 'package:expense_tracker/services/firestore_service.dart';
 import 'package:expense_tracker/services/notification_service.dart';
 import 'package:expense_tracker/theme/app_theme.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -21,34 +22,39 @@ class FakeLlm implements LlmBackend {
   final String cleaned;
   final bool shouldThrow;
   var calls = 0;
+  String? input;
 
   @override
   Future<String> cleanup(String note) async {
     calls++;
+    input = note;
     if (shouldThrow) throw StateError('llm down');
     return cleaned;
   }
 }
 
 Expense _exp(String note) => Expense(
-      id: 'e1',
-      amount: 5000,
-      categoryId: 'c1',
-      note: note,
-      date: DateTime(2024, 11, 20),
-    );
+  id: 'e1',
+  amount: 5000,
+  categoryId: 'c1',
+  note: note,
+  date: DateTime(2026, 11, 20),
+);
 
 void main() {
   group('SummaryService', () {
-    test('short note uses template without calling the LLM', () async {
+    test('summarizes short details with the subcategory context', () async {
       final llm = FakeLlm();
       final service = SummaryService(llm: llm);
       final summary = await service.summarize(
-        expense: _exp('moto to school'),
+        expense: _exp('moto to school').copyWith(subcategory: 'Jamila'),
         categoryName: 'Transport',
       );
-      expect(summary, '5000 XAF — Transport, moto to school');
-      expect(llm.calls, 0);
+      expect(summary, 'cleaned note');
+      expect(llm.calls, 1);
+      expect(llm.input, contains('Category: Transport'));
+      expect(llm.input, contains('Subcategory: Jamila'));
+      expect(llm.input, contains('Details: moto to school'));
     });
 
     test('long note routes to the LLM', () async {
@@ -59,7 +65,7 @@ void main() {
         categoryName: 'Food',
       );
       expect(llm.calls, 1);
-      expect(summary, '5000 XAF — Food, bulk grocery restock');
+      expect(summary, 'bulk grocery restock');
     });
 
     test('LLM failure falls back to template', () async {
@@ -73,58 +79,78 @@ void main() {
       expect(summary, '5000 XAF — Food, $note');
     });
 
-    test('Gemini backend without key returns input (no network)',
-        () async {
-      const backend = GeminiLlmBackend(apiKey: '');
-      expect(await backend.cleanup('some note'), 'some note');
+    test('pass-through backend uses readable local template', () async {
+      final service = SummaryService();
+      expect(
+        await service.summarize(
+          expense: _exp('').copyWith(subcategory: 'Jamila'),
+          categoryName: 'Personal',
+        ),
+        '5000 XAF — Personal, Jamila',
+      );
     });
 
-    group('Gemini HTTP transport (mocked)', () {
-      test('posts note and parses cleaned label', () async {
+    group('Proxy HTTP transport (mocked)', () {
+      test('sends bearer token and returns proxied summary', () async {
+        String? seenAuth;
         Object? sentBody;
         final client = MockClient((req) async {
-          expect(req.url.host, 'generativelanguage.googleapis.com');
-          expect(req.url.queryParameters['key'], 'k123');
+          seenAuth = req.headers['Authorization'];
           expect(req.headers['Content-Type'], contains('application/json'));
           sentBody = jsonDecode(req.body);
           return http.Response(
-            jsonEncode({
-              'candidates': [
-                {
-                  'content': {
-                    'parts': [
-                      {'text': '  bulk grocery restock  '},
-                    ],
-                  },
-                },
-              ],
-            }),
+            jsonEncode({'summary': 'bulk grocery restock'}),
             200,
           );
         });
-        final backend = GeminiLlmBackend(client: client, apiKey: 'k123');
-        expect(await backend.cleanup('a very long messy note'),
-            'bulk grocery restock');
+        final backend = ProxyLlmBackend(
+          client: client,
+          endpoint: Uri.parse('https://example.test/getGeminiSummary'),
+          idTokenProvider: () async => 'tok123',
+        );
+        expect(
+          await backend.cleanup('a very long messy note'),
+          'bulk grocery restock',
+        );
+        expect(seenAuth, 'Bearer tok123');
         expect((sentBody as Map).toString(), contains('a very long messy'));
+      });
+
+      test('missing token returns input without network', () async {
+        var called = false;
+        final client = MockClient((_) async {
+          called = true;
+          return http.Response('{}', 200);
+        });
+        final backend = ProxyLlmBackend(
+          client: client,
+          endpoint: Uri.parse('https://example.test/getGeminiSummary'),
+          idTokenProvider: () async => null,
+        );
+        expect(await backend.cleanup('keep me'), 'keep me');
+        expect(called, isFalse);
       });
 
       test('non-200 response returns input', () async {
         final client = MockClient((_) async => http.Response('denied', 403));
-        final backend = GeminiLlmBackend(client: client, apiKey: 'k123');
+        final backend = ProxyLlmBackend(
+          client: client,
+          endpoint: Uri.parse('https://example.test/getGeminiSummary'),
+          idTokenProvider: () async => 'tok123',
+        );
         expect(await backend.cleanup('keep me'), 'keep me');
       });
 
       test('malformed body returns input', () async {
         final client = MockClient(
-            (_) async => http.Response(jsonEncode({'nope': []}), 200));
-        final backend = GeminiLlmBackend(client: client, apiKey: 'k123');
+          (_) async => http.Response(jsonEncode({'nope': []}), 200),
+        );
+        final backend = ProxyLlmBackend(
+          client: client,
+          endpoint: Uri.parse('https://example.test/getGeminiSummary'),
+          idTokenProvider: () async => 'tok123',
+        );
         expect(await backend.cleanup('keep me'), 'keep me');
-      });
-
-      test('requestUri targets generateContent with key', () {
-        final uri = GeminiLlmBackend.requestUri('k123');
-        expect(uri.path, contains('generateContent'));
-        expect(uri.queryParameters['key'], 'k123');
       });
     });
   });
@@ -143,18 +169,17 @@ void main() {
           ),
         ],
       );
+      final service = FirestoreService(db: FakeFirebaseFirestore(), uid: 'u1');
       await tester.pumpWidget(
         MultiProvider(
           providers: [
             ChangeNotifierProvider<ExpenseStore>.value(value: store),
-            Provider<FirestoreService?>.value(value: null),
+            Provider<FirestoreService?>.value(value: service),
             ChangeNotifierProvider<NotificationService>(
               create: (_) =>
                   NotificationService(backend: FakeNotificationBackend()),
             ),
-            Provider<SummaryService>.value(
-              value: SummaryService(llm: llm),
-            ),
+            Provider<SummaryService>.value(value: SummaryService(llm: llm)),
           ],
           child: MaterialApp(
             theme: AppTheme.light(),
@@ -165,6 +190,7 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(TextField).last, 'x' * 150);
+      await tester.enterText(find.byType(TextField).at(1), 'Groceries');
       await tester.pump();
       final saveBtn = find.text('Save Expense');
       await tester.scrollUntilVisible(
@@ -174,14 +200,12 @@ void main() {
       );
       await tester.pumpAndSettle();
       await tester.tap(saveBtn);
+      await tester.pump();
       await tester.pumpAndSettle();
 
       expect(llm.calls, 1);
       expect(store.expenses, hasLength(1));
-      expect(
-        store.expenses.first.summary,
-        '5000 XAF — Food, cleaned note',
-      );
+      expect(store.expenses.first.summary, 'cleaned note');
     });
   });
 }

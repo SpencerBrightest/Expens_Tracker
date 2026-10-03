@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import 'ai/summary.dart';
 import 'firebase_options.dart';
 import 'providers/expense_store.dart';
-import 'screens/auth_screen.dart';
 import 'services/auth_service.dart';
 import 'services/firestore_service.dart';
 import 'services/notification_service.dart';
@@ -13,9 +12,8 @@ import 'theme/app_theme.dart';
 import 'widgets/auth_gate.dart';
 import 'widgets/splash_gate.dart';
 
-/// Fresh users start with a clean slate: no categories, no expenses.
-/// Categories are created inline from Add/Edit Expense; cloud data loads
-/// via [ExpenseStore.loadFromRemote] on sign-in.
+/// Fresh users start with no expenses; the store seeds five categories on
+/// first sign-in and loads the user's Firestore data.
 ExpenseStore seedStore() => ExpenseStore();
 
 void main() async {
@@ -23,14 +21,20 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   final notifications = NotificationService();
   await notifications.init();
-  await notifications.setDailyReminder(true);
+  final authService = AuthService();
   runApp(
     NdohApp(
       store: seedStore(),
-      authService: AuthService(),
+      authService: authService,
       notificationService: notifications,
-      // Real Gemini path (template-only until --dart-define=GEMINI_API_KEY).
-      summaryService: SummaryService(llm: const GeminiLlmBackend()),
+      summaryService: SummaryService(
+        llm: ProxyLlmBackend(
+          endpoint: Uri.parse(
+            'https://us-central1-expense-tracker-ca5d2.cloudfunctions.net/getGeminiSummary',
+          ),
+          idTokenProvider: authService.getIdToken,
+        ),
+      ),
     ),
   );
 }
@@ -80,7 +84,7 @@ class NdohApp extends StatelessWidget {
         theme: AppTheme.light(),
         home: const SplashGate(),
         routes: {
-          '/auth': (_) => const AuthScreen(),
+          '/auth': (_) => const AuthGate(),
           '/dashboard': (_) => const AuthGate(),
         },
       ),

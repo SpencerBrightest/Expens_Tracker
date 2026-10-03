@@ -1,7 +1,5 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
-
 import '../theme/app_colors.dart';
 
 /// Splash: Stitch reference + 3 large solid dots centered near bottom.
@@ -97,9 +95,7 @@ class _SplashScreenState extends State<SplashScreen> {
                       1.0,
                     ),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(
-                      alpha: active ? 1.0 : 0.4,
-                    ),
+                    color: Colors.white.withValues(alpha: active ? 1.0 : 0.4),
                     shape: BoxShape.circle,
                   ),
                 );

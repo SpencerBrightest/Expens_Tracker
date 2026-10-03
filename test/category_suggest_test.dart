@@ -12,19 +12,19 @@ import 'package:provider/provider.dart';
 import 'fakes.dart';
 
 Category _cat(String id, String name) => Category(
-      id: id,
-      name: name,
-      monthlyLimit: 1000,
-      colorValue: 0xFF2D68FE,
-      iconCodePoint: 0xe318,
-    );
+  id: id,
+  name: name,
+  monthlyLimit: 1000,
+  colorValue: 0xFF2D68FE,
+  iconCodePoint: 0xe318,
+);
 
 List<Category> _cats() => [
-      _cat('c1', 'Housing'),
-      _cat('c2', 'Food & Dining'),
-      _cat('c3', 'Transport'),
-      _cat('c4', 'Entertainment'),
-    ];
+  _cat('c1', 'Housing'),
+  _cat('c2', 'Food & Dining'),
+  _cat('c3', 'Transport'),
+  _cat('c4', 'Entertainment'),
+];
 
 void main() {
   group('suggestCategoryId', () {
@@ -56,10 +56,9 @@ void main() {
 
   group('Suggestion chip', () {
     testWidgets('appears after typing and applies on tap', (tester) async {
-      final store = ExpenseStore(categories: [
-        _cat('c1', 'Food'),
-        _cat('c2', 'Transport'),
-      ]);
+      final store = ExpenseStore(
+        categories: [_cat('c1', 'Food'), _cat('c2', 'Transport')],
+      );
       await tester.pumpWidget(
         MultiProvider(
           providers: [

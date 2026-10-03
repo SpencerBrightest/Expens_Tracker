@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show ChangeNotifier;
 
 import '../models/category.dart';
 import '../models/expense.dart';
+import '../data/dummy_data.dart';
 import '../services/firestore_service.dart';
 
 /// Phase-3 in-memory state. Categories cached here (never refetched per
@@ -9,8 +10,8 @@ import '../services/firestore_service.dart';
 /// here in Phase 4.
 class ExpenseStore extends ChangeNotifier {
   ExpenseStore({List<Category>? categories, List<Expense>? expenses})
-      : _categories = List.of(categories ?? const []),
-        _expenses = List.of(expenses ?? const []) {
+    : _categories = List.of(categories ?? const []),
+      _expenses = List.of(expenses ?? const []) {
     _sortExpenses();
   }
 
@@ -20,8 +21,7 @@ class ExpenseStore extends ChangeNotifier {
   List<Category> get categories => List.unmodifiable(_categories);
   List<Expense> get expenses => List.unmodifiable(_expenses);
 
-  double get totalSpent =>
-      _expenses.fold(0, (sum, e) => sum + e.amount);
+  double get totalSpent => _expenses.fold(0, (sum, e) => sum + e.amount);
 
   double totalByCategory(String categoryId) => _expenses
       .where((e) => e.categoryId == categoryId)
@@ -150,7 +150,7 @@ class ExpenseStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Adds a category (inline creation from Add/Edit Expense).
+  /// Adds a category to the current user's local cache.
   void addCategory(Category category) {
     if (_categories.any((c) => c.id == category.id)) {
       throw ArgumentError('Duplicate category id: ${category.id}');
@@ -163,6 +163,12 @@ class ExpenseStore extends ChangeNotifier {
   Future<void> loadFromRemote(FirestoreService svc) async {
     final expenses = await svc.watchExpenses(limit: 500).first;
     final categories = await svc.watchCategories().first;
+    if (categories.isEmpty) {
+      for (final category in starterCategories) {
+        await svc.saveCategory(category);
+      }
+      categories.addAll(starterCategories);
+    }
     _expenses
       ..clear()
       ..addAll(expenses);
@@ -175,10 +181,7 @@ class ExpenseStore extends ChangeNotifier {
 
   /// Optimistic save: inserts locally first, syncs in the background,
   /// rolls back only on failure (then rethrows).
-  Future<void> persistExpense(
-    FirestoreService svc,
-    Expense expense,
-  ) async {
+  Future<void> persistExpense(FirestoreService svc, Expense expense) async {
     categoryById(expense.categoryId);
     final i = _expenses.indexWhere((e) => e.id == expense.id);
     final previous = i == -1 ? null : _expenses[i];
@@ -205,10 +208,7 @@ class ExpenseStore extends ChangeNotifier {
   }
 
   /// Optimistic delete with rollback on failure.
-  Future<void> deleteExpenseRemote(
-    FirestoreService svc,
-    String id,
-  ) async {
+  Future<void> deleteExpenseRemote(FirestoreService svc, String id) async {
     final i = _expenses.indexWhere((e) => e.id == id);
     if (i == -1) throw ArgumentError('Unknown expense: $id');
     final removed = _expenses.removeAt(i);

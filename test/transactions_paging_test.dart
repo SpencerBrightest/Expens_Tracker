@@ -56,8 +56,7 @@ Widget _withService(FirestoreService svc) {
       ),
       Provider<FirestoreService?>.value(value: svc),
       ChangeNotifierProvider<NotificationService>(
-        create: (_) =>
-            NotificationService(backend: FakeNotificationBackend()),
+        create: (_) => NotificationService(backend: FakeNotificationBackend()),
       ),
     ],
     child: MaterialApp(
@@ -106,4 +105,3 @@ void main() {
     });
   });
 }
-

@@ -33,10 +33,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             children: [
               const Text(
                 'Analytics',
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 12),
               Card(
@@ -57,54 +54,56 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     'Insight',
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
-                  subtitle: Builder(builder: (context) {
-                    return Text(
-                      buildInsight(context.watch<ExpenseStore>()),
-                    );
-                  }),
+                  subtitle: Builder(
+                    builder: (context) {
+                      return Text(buildInsight(context.watch<ExpenseStore>()));
+                    },
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
-              Builder(builder: (context) {
-                final store = context.watch<ExpenseStore>();
-                final totals = store.totalsByCategory();
-                String topLine = 'No spending yet';
-                if (totals.isNotEmpty) {
-                  final top = totals.entries.reduce(
-                    (a, b) => a.value >= b.value ? a : b,
-                  );
-                  final share = store.shareOfTotal(top.key);
-                  topLine =
-                      '${store.categoryName(top.key)} · ${(share * 100).toStringAsFixed(1)}% of spending';
-                }
-                return Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: _SummaryCell(
-                            label: 'Total spent',
-                            value: xafFormat.format(store.totalSpent),
+              Builder(
+                builder: (context) {
+                  final store = context.watch<ExpenseStore>();
+                  final totals = store.totalsByCategory();
+                  String topLine = 'No spending yet';
+                  if (totals.isNotEmpty) {
+                    final top = totals.entries.reduce(
+                      (a, b) => a.value >= b.value ? a : b,
+                    );
+                    final share = store.shareOfTotal(top.key);
+                    topLine =
+                        '${store.categoryName(top.key)} · ${(share * 100).toStringAsFixed(1)}% of spending';
+                  }
+                  return Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _SummaryCell(
+                              label: 'Total spent',
+                              value: xafFormat.format(store.totalSpent),
+                            ),
                           ),
-                        ),
-                        Expanded(
-                          child: _SummaryCell(
-                            label: 'Categories',
-                            value: '${totals.length}',
+                          Expanded(
+                            child: _SummaryCell(
+                              label: 'Categories',
+                              value: '${totals.length}',
+                            ),
                           ),
-                        ),
-                        Expanded(
-                          child: _SummaryCell(
-                            label: 'Top category',
-                            value: topLine,
+                          Expanded(
+                            child: _SummaryCell(
+                              label: 'Top category',
+                              value: topLine,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                );
-              }),
+                  );
+                },
+              ),
               const SizedBox(height: 12),
               Card(
                 child: Padding(
@@ -138,9 +137,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                             setState(() => _showPercentage = s.first),
                       ),
                       const SizedBox(height: 12),
-                      SpendingPieChart(
-                        showPercentage: _showPercentage,
-                      ),
+                      SpendingPieChart(showPercentage: _showPercentage),
                     ],
                   ),
                 ),
@@ -185,16 +182,10 @@ class _SummaryCell extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 12,
-          ),
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
         ),
         const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(fontWeight: FontWeight.w700),
-        ),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
       ],
     );
   }

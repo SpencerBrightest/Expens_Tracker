@@ -119,6 +119,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      await tester.enterText(find.byType(TextField).at(1), 'School rides');
       await tester.enterText(find.byType(TextField).last, 'moto to school');
       await tester.pump();
       await _reveal(tester, find.text('Save Expense'));
@@ -132,7 +133,7 @@ void main() {
       ]);
     });
 
-    testWidgets('empty categories offers inline creation on save', (
+    testWidgets('empty categories offers predefined selections', (
       tester,
     ) async {
       final store = ExpenseStore();
@@ -142,20 +143,31 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // No silent dead-end: the screen asks for a category name.
-      expect(find.text('New category'), findsOneWidget);
+      expect(find.text('Home'), findsOneWidget);
+      expect(find.text('Food'), findsNothing);
+      await tester.tap(find.byType(DropdownButtonFormField<String>));
+      await tester.pumpAndSettle();
+      expect(find.text('Food'), findsOneWidget);
+      await tester.tap(find.text('Home').last);
+      await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField).at(0), '5000');
-      await tester.enterText(find.byType(TextField).at(1), 'Transport');
+      await tester.enterText(find.byType(TextField).at(1), 'Rent');
       await tester.enterText(find.byType(TextField).last, 'moto');
       await tester.pump();
       await _reveal(tester, find.text('Save Expense'));
       await tester.tap(find.text('Save Expense'));
       await tester.pumpAndSettle();
 
-      expect(store.categories.map((c) => c.name), ['Transport']);
+      expect(store.categories.map((c) => c.name), [
+        'Home',
+        'Food',
+        'Transport',
+        'Bills',
+        'Personal',
+      ]);
       expect(store.expenses, hasLength(1));
       expect(store.expenses.first.categoryId, store.categories.first.id);
-      expect(await service.watchCategories().first, hasLength(1));
+      expect(await service.watchCategories().first, hasLength(5));
       expect(await service.watchExpenses().first, hasLength(1));
     });
 

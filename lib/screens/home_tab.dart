@@ -26,8 +26,7 @@ class HomeTab extends StatelessWidget {
       user = null;
     }
     final firstName = user?.firstName ?? 'Friend';
-    final initial =
-        firstName.isEmpty ? 'N' : firstName[0].toUpperCase();
+    final initial = firstName.isEmpty ? 'N' : firstName[0].toUpperCase();
     final monthLabel = DateFormat('MMMM y').format(DateTime.now());
     final total = store.totalSpent;
     final cap = store.categories.fold(0.0, (s, c) => s + c.monthlyLimit);
@@ -118,9 +117,7 @@ class HomeTab extends StatelessWidget {
                       child: LinearProgressIndicator(
                         value: progress,
                         minHeight: 8,
-                        backgroundColor: Colors.white.withValues(
-                          alpha: 0.2,
-                        ),
+                        backgroundColor: Colors.white.withValues(alpha: 0.2),
                         valueColor: const AlwaysStoppedAnimation(
                           AppColors.successContainer,
                         ),
@@ -143,8 +140,7 @@ class HomeTab extends StatelessWidget {
               GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 3,
                   crossAxisSpacing: 10,
                   mainAxisSpacing: 10,
@@ -161,10 +157,7 @@ class HomeTab extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            categoryIcon(c.iconCodePoint),
-                            color: color,
-                          ),
+                          Icon(categoryIcon(c.iconCodePoint), color: color),
                           const Spacer(),
                           Text(
                             c.name,
@@ -176,12 +169,8 @@ class HomeTab extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            xafFormat.format(
-                              store.totalByCategory(c.id),
-                            ),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                            ),
+                            xafFormat.format(store.totalByCategory(c.id)),
+                            style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
                         ],
                       ),

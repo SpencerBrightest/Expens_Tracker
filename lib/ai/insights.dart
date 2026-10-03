@@ -27,15 +27,16 @@ String buildInsight(ExpenseStore store) {
     if (topId != null) {
       final share = (top / total * 100).round();
       if (share >= 50) {
-        final name = store.categoryFor(
-          store.expenses.firstWhere((e) => e.categoryId == topId),
-        ).name;
+        final name = store
+            .categoryFor(
+              store.expenses.firstWhere((e) => e.categoryId == topId),
+            )
+            .name;
         return '$name is $share% of your spending.';
       }
     }
   }
-  final used = store
-      .categories
+  final used = store.categories
       .where((c) => store.totalByCategory(c.id) > 0)
       .length;
   return 'Your spending is spread across $used categories.';

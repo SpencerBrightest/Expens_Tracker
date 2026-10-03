@@ -2,6 +2,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/category.dart';
 import '../models/expense.dart';
+import '../models/user_preferences.dart';
+
+/// Opaque pagination cursor for expenses. Screens use this type so they
+/// never import cloud_firestore directly (AGENTS.md gateway rule).
+typedef ExpenseCursor = DocumentSnapshot<Map<String, dynamic>>;
 
 /// One page of expenses plus the cursor for the next page.
 class ExpensePage {
@@ -10,7 +15,7 @@ class ExpensePage {
   final List<Expense> expenses;
 
   /// Null when this page is empty (nothing more to fetch).
-  final DocumentSnapshot<Map<String, dynamic>>? lastDoc;
+  final ExpenseCursor? lastDoc;
 }
 
 /// Firestore access, scoped per user:
@@ -18,25 +23,52 @@ class ExpensePage {
 /// Screens/widgets must use this — never import cloud_firestore directly.
 class FirestoreService {
   FirestoreService({FirebaseFirestore? db, required this.uid})
-      : _db = db ?? FirebaseFirestore.instance;
+    : _db = db ?? FirebaseFirestore.instance;
 
   final FirebaseFirestore _db;
   final String uid;
 
-  CollectionReference<Map<String, dynamic>> get _expenses => _db
-      .collection('users')
-      .doc(uid)
-      .collection('expenses');
+  DocumentReference<Map<String, dynamic>> get _user =>
+      _db.collection('users').doc(uid);
 
-  CollectionReference<Map<String, dynamic>> get _categories => _db
-      .collection('users')
-      .doc(uid)
-      .collection('categories');
+  CollectionReference<Map<String, dynamic>> get _expenses =>
+      _user.collection('expenses');
+
+  CollectionReference<Map<String, dynamic>> get _categories =>
+      _user.collection('categories');
+
+  /// Creates or refreshes the safe profile fields for the signed-in user.
+  /// Passwords and authentication tokens remain in Firebase Authentication.
+  Future<void> saveUserProfile({
+    required String email,
+    required String? displayName,
+  }) async {
+    final snapshot = await _user.get();
+    await _user.set({
+      'uid': uid,
+      'email': email.trim(),
+      'displayName': displayName?.trim() ?? '',
+      'updatedAt': FieldValue.serverTimestamp(),
+      if (!snapshot.exists) 'createdAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  Future<UserPreferences?> loadUserPreferences() async {
+    final snapshot = await _user.get();
+    final value = snapshot.data()?['preferences'];
+    if (value is! Map<String, dynamic>) return null;
+    return UserPreferences.fromMap(value);
+  }
+
+  Future<void> saveUserPreferences(UserPreferences preferences) {
+    return _user.set({
+      'preferences': preferences.toMap(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
 
   static List<Expense> _expenseList(QuerySnapshot<Map<String, dynamic>> snap) {
-    return snap.docs
-        .map((d) => Expense.fromMap(d.id, d.data()))
-        .toList();
+    return snap.docs.map((d) => Expense.fromMap(d.id, d.data())).toList();
   }
 
   Query<Map<String, dynamic>> _orderedExpenses({int? limit}) {
@@ -47,9 +79,7 @@ class FirestoreService {
 
   /// Live expense list, newest-first.
   Stream<List<Expense>> watchExpenses({int limit = 50}) {
-    return _orderedExpenses(limit: limit)
-        .snapshots()
-        .map(_expenseList);
+    return _orderedExpenses(limit: limit).snapshots().map(_expenseList);
   }
 
   /// One page of expenses for `limit()/startAfter()` pagination.
@@ -58,7 +88,7 @@ class FirestoreService {
   /// the built query declaratively with the same result.
   Future<ExpensePage> fetchExpensesPage({
     int limit = 20,
-    DocumentSnapshot<Map<String, dynamic>>? startAfter,
+    ExpenseCursor? startAfter,
   }) async {
     var q = _expenses.orderBy('date', descending: true);
     if (startAfter != null) q = q.startAfterDocument(startAfter);
@@ -80,10 +110,8 @@ class FirestoreService {
 
   Stream<List<Category>> watchCategories() {
     return _categories.snapshots().map(
-          (snap) => snap.docs
-              .map((d) => Category.fromMap(d.id, d.data()))
-              .toList(),
-        );
+      (snap) => snap.docs.map((d) => Category.fromMap(d.id, d.data())).toList(),
+    );
   }
 
   Future<void> saveCategory(Category category) {

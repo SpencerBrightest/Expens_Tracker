@@ -10,21 +10,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 Category _cat(String id) => Category(
-      id: id,
-      name: 'Name $id',
-      monthlyLimit: 1000,
-      colorValue: 0xFF2D68FE,
-      iconCodePoint: 0xe318,
-    );
+  id: id,
+  name: 'Name $id',
+  monthlyLimit: 1000,
+  colorValue: 0xFF2D68FE,
+  iconCodePoint: 0xe318,
+);
 
 Expense _exp(String id, String catId, double amount, DateTime date) =>
-    Expense(
-      id: id,
-      amount: amount,
-      categoryId: catId,
-      note: 'n',
-      date: date,
-    );
+    Expense(id: id, amount: amount, categoryId: catId, note: 'n', date: date);
 
 Widget _withStore(ExpenseStore store, Widget child) {
   return ChangeNotifierProvider<ExpenseStore>.value(
@@ -44,8 +38,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final pie = tester.widget<PieChart>(find.byType(PieChart));
-      final values =
-          pie.data.sections.map((s) => s.value).toList()..sort();
+      final values = pie.data.sections.map((s) => s.value).toList()..sort();
       expect(values, [150, 300]);
     });
 
@@ -57,8 +50,9 @@ void main() {
       expect(find.text('No spending yet'), findsOneWidget);
     });
 
-    testWidgets('totals mode labels slices with compact amounts',
-        (tester) async {
+    testWidgets('totals mode labels slices with compact amounts', (
+      tester,
+    ) async {
       final store = ExpenseStore(categories: [_cat('c1'), _cat('c2')]);
       store.addExpense(_exp('e1', 'c1', 1500, DateTime(2024, 11, 1)));
       store.addExpense(_exp('e2', 'c2', 300, DateTime(2024, 11, 2)));
@@ -69,14 +63,14 @@ void main() {
       await tester.pumpAndSettle();
 
       final pie = tester.widget<PieChart>(find.byType(PieChart));
-      final titles =
-          pie.data.sections.map((s) => s.title).toList()..sort();
+      final titles = pie.data.sections.map((s) => s.title).toList()..sort();
       expect(titles, ['1.5k', '300']);
       expect(find.textContaining('Name c1'), findsOneWidget);
     });
 
-    testWidgets('percentage mode labels slices with shares of total',
-        (tester) async {
+    testWidgets('percentage mode labels slices with shares of total', (
+      tester,
+    ) async {
       final store = ExpenseStore(categories: [_cat('c1'), _cat('c2')]);
       store.addExpense(_exp('e1', 'c1', 150, DateTime(2024, 11, 1)));
       store.addExpense(_exp('e2', 'c2', 300, DateTime(2024, 11, 2)));
@@ -87,8 +81,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final pie = tester.widget<PieChart>(find.byType(PieChart));
-      final titles =
-          pie.data.sections.map((s) => s.title).toList()..sort();
+      final titles = pie.data.sections.map((s) => s.title).toList()..sort();
       expect(titles, ['33%', '67%']);
       // Legend shows "this percent on this".
       expect(find.text('33.3%'), findsOneWidget);
@@ -105,31 +98,26 @@ void main() {
       await tester.pumpWidget(
         _withStore(
           store,
-          SpendingTrendChart(
-            months: 3,
-            reference: DateTime(2024, 12, 15),
-          ),
+          SpendingTrendChart(months: 3, reference: DateTime(2024, 12, 15)),
         ),
       );
       await tester.pumpAndSettle();
 
       final bar = tester.widget<BarChart>(find.byType(BarChart));
-      final heights =
-          bar.data.barGroups.map((g) => g.barRods.first.toY).toList();
+      final heights = bar.data.barGroups
+          .map((g) => g.barRods.first.toY)
+          .toList();
       expect(heights, [100, 0, 250]);
     });
   });
 
   group('AnalyticsScreen filter', () {
-    testWidgets('Totals/Percentages toggle reshapes the donut',
-        (tester) async {
+    testWidgets('Totals/Percentages toggle reshapes the donut', (tester) async {
       final store = ExpenseStore(categories: [_cat('c1'), _cat('c2')]);
       store.addExpense(_exp('e1', 'c1', 150, DateTime(2024, 11, 1)));
       store.addExpense(_exp('e2', 'c2', 300, DateTime(2024, 11, 2)));
 
-      await tester.pumpWidget(
-        _withStore(store, const AnalyticsScreen()),
-      );
+      await tester.pumpWidget(_withStore(store, const AnalyticsScreen()));
       await tester.pumpAndSettle();
 
       // Summary row shows the computed total and top share.
@@ -138,17 +126,13 @@ void main() {
 
       // Totals mode first: compact amount labels.
       var pie = tester.widget<PieChart>(find.byType(PieChart));
-      expect(
-        pie.data.sections.map((s) => s.title).toList(),
-        contains('150'),
-      );
+      expect(pie.data.sections.map((s) => s.title).toList(), contains('150'));
 
       // Switch to Percentages: slice + legend show shares.
       await tester.tap(find.text('Percentages'));
       await tester.pumpAndSettle();
       pie = tester.widget<PieChart>(find.byType(PieChart));
-      final titles = pie.data.sections.map((s) => s.title).toList()
-        ..sort();
+      final titles = pie.data.sections.map((s) => s.title).toList()..sort();
       expect(titles, ['33%', '67%']);
       expect(find.text('66.7%'), findsOneWidget);
     });

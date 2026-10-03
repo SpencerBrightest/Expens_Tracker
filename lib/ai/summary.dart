@@ -1,11 +1,10 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/expense.dart';
 
-/// LLM contract for cleaning long/messy notes. Tests use a fake.
+/// LLM contract for turning expense details into a concise note.
 abstract class LlmBackend {
   Future<String> cleanup(String note);
 }
@@ -18,62 +17,41 @@ class NoopLlmBackend implements LlmBackend {
   Future<String> cleanup(String note) async => note;
 }
 
-/// Gemini cleanup for notes too long/messy for the plain template.
-/// Key comes from `--dart-define=GEMINI_API_KEY=...` (never committed);
-/// empty key means template-only. Any failure falls back to the input.
-class GeminiLlmBackend implements LlmBackend {
-  const GeminiLlmBackend({http.Client? client, String? apiKey})
-      : _apiKey =
-            apiKey ?? const String.fromEnvironment('GEMINI_API_KEY'),
-        // ignore: prefer_initializing_formals
-        _client = client;
+/// Authenticated proxy backend: the Gemini key lives in the Cloud Function
+/// (Functions secret), never in the client. The ID token comes from
+/// [AuthService.getIdToken] via injection, so this file never imports
+/// firebase_auth directly. Any failure falls back to the input note.
+class ProxyLlmBackend implements LlmBackend {
+  const ProxyLlmBackend({
+    http.Client? client,
+    required this.endpoint,
+    required this.idTokenProvider,
+  }) : _client = client; // ignore: prefer_initializing_formals
 
   final http.Client? _client;
-  final String _apiKey;
-
-  @visibleForTesting
-  static Uri requestUri(String key) => Uri.parse(
-        'https://generativelanguage.googleapis.com/v1beta/models/'
-        'gemini-2.0-flash:generateContent?key=$key',
-      );
+  final Uri endpoint;
+  final Future<String?> Function() idTokenProvider;
 
   @override
   Future<String> cleanup(String note) async {
-    if (_apiKey.isEmpty) return note;
     try {
+      final token = await idTokenProvider();
+      if (token == null || token.isEmpty) return note;
       final client = _client ?? http.Client();
       final res = await client.post(
-        requestUri(_apiKey),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'contents': [
-            {
-              'parts': [
-                {
-                  'text':
-                      'Rewrite this expense note as a 6-word-max, lowercase, '
-                      'plain expense label. Reply with ONLY the label, no quotes: $note',
-                },
-              ],
-            },
-          ],
-        }),
+        endpoint,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'note': note}),
       );
       if (res.statusCode != 200) return note;
-      final body = jsonDecode(res.body) as Map<String, dynamic>;
-      final candidates = body['candidates'];
-      if (candidates is! List || candidates.isEmpty) return note;
-      final first = candidates.first;
-      if (first is! Map) return note;
-      final content = first['content'];
-      if (content is! Map) return note;
-      final parts = content['parts'];
-      if (parts is! List || parts.isEmpty) return note;
-      final part = parts.first;
-      if (part is! Map) return note;
-      final text = part['text'];
-      if (text is! String) return note;
-      final cleaned = text.trim();
+      final body = jsonDecode(res.body);
+      if (body is! Map) return note;
+      final summary = body['summary'];
+      if (summary is! String) return note;
+      final cleaned = summary.trim();
       return cleaned.isEmpty ? note : cleaned;
     } catch (_) {
       return note;
@@ -81,27 +59,26 @@ class GeminiLlmBackend implements LlmBackend {
   }
 }
 
-/// One-line per-expense summary. Template by default (instant, free);
-/// only long notes route to the LLM. Never throws.
+/// Summarizes subcategory and optional details. Failures use a local template.
 class SummaryService {
-  SummaryService({LlmBackend? llm, this.longNoteThreshold = 120})
-      : _llm = llm ?? const NoopLlmBackend();
+  SummaryService({LlmBackend? llm}) : _llm = llm ?? const NoopLlmBackend();
 
   final LlmBackend _llm;
-  final int longNoteThreshold;
 
   Future<String> summarize({
     required Expense expense,
     required String categoryName,
   }) async {
-    final note = expense.note.trim();
-    if (note.length <= longNoteThreshold) {
-      return expense.effectiveSummary(categoryName);
-    }
+    final source = [
+      'Category: $categoryName',
+      'Subcategory: ${expense.subcategory}',
+      if (expense.note.trim().isNotEmpty) 'Details: ${expense.note.trim()}',
+    ].join('\n');
     try {
-      final cleaned = (await _llm.cleanup(note)).trim();
-      final use = cleaned.isEmpty ? note : cleaned;
-      return expense.copyWith(note: use).effectiveSummary(categoryName);
+      final note = (await _llm.cleanup(source)).trim();
+      return note.isEmpty || note == source
+          ? expense.effectiveSummary(categoryName)
+          : note;
     } catch (_) {
       return expense.effectiveSummary(categoryName);
     }

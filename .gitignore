@@ -50,3 +50,7 @@ app.*.map.json
 # Env / secrets — never commit keys (Gemini key = Phase 8 only)
 .env
 .env.*
+
+# Firebase Functions (Node) — never commit deps or build output
+functions/node_modules/
+functions/lib/

@@ -66,6 +66,7 @@ void main() {
         amount: 5000,
         categoryId: 'c1',
         note: 'moto to school',
+        subcategory: 'School rides',
         date: date,
         paymentMethod: 'Cash',
         summary: '5,000 XAF — Transport, moto to school',
@@ -73,9 +74,33 @@ void main() {
       final map = exp.toMap();
       expect(map['amount'], 5000);
       expect(map['categoryId'], 'c1');
+      expect(map['subcategory'], 'School rides');
 
       final back = Expense.fromMap('e1', map);
       expect(back, exp);
+    });
+
+    test('legacy map uses note as the missing subcategory', () {
+      final exp = Expense.fromMap('old', {
+        'amount': 1000,
+        'categoryId': 'c1',
+        'note': 'Old expense note',
+        'date': DateTime(2024, 11, 20).millisecondsSinceEpoch,
+      });
+      expect(exp.subcategory, 'Old expense note');
+    });
+
+    test('legacy summary does not repeat the note', () {
+      final exp = Expense.fromMap('old', {
+        'amount': 5000,
+        'categoryId': 'c1',
+        'note': 'moto to school',
+        'date': DateTime(2024, 11, 20).millisecondsSinceEpoch,
+      });
+      expect(
+        exp.effectiveSummary('Transport'),
+        '5000 XAF — Transport, moto to school',
+      );
     });
 
     test('defaults summary to template when absent', () {

@@ -38,6 +38,17 @@ void main() {
       backend.dispose();
     });
 
+    test('updateDisplayName edits the signed-in profile', () async {
+      final backend = FakeAuthBackend();
+      final service = AuthService(backend: backend);
+      await service.signIn('a@x.com', 'secret123');
+      final updated = await service.updateDisplayName('  Jamila Bright  ');
+
+      expect(updated.displayName, 'Jamila Bright');
+      expect(service.currentUser?.firstName, 'Jamila');
+      backend.dispose();
+    });
+
     test('authStateChanges emits null -> user -> null', () async {
       final backend = FakeAuthBackend();
       final service = AuthService(backend: backend);
@@ -56,10 +67,8 @@ void main() {
     test('blank email/password throws ArgumentError', () async {
       final backend = FakeAuthBackend();
       final service = AuthService(backend: backend);
-      expect(() => service.signIn('  ', 'secret123'),
-          throwsArgumentError);
-      expect(
-          () => service.signIn('a@x.com', '  '), throwsArgumentError);
+      expect(() => service.signIn('  ', 'secret123'), throwsArgumentError);
+      expect(() => service.signIn('a@x.com', '  '), throwsArgumentError);
       expect(() => service.signUp('', 'secret123'), throwsArgumentError);
       backend.dispose();
     });
@@ -70,14 +79,25 @@ void main() {
       expect(
         () => service.signUp('a@x.com', '12345'),
         throwsA(
-          isArgumentError.having(
-            (e) => e.message,
-            'message',
-            contains('6'),
-          ),
+          isArgumentError.having((e) => e.message, 'message', contains('6')),
         ),
       );
       backend.dispose();
+    });
+
+    test('existing email offers login with a clear Firebase error', () {
+      final failure = AuthFailure.fromFirebaseCode('email-already-in-use');
+
+      expect(failure.message, contains('already exists'));
+      expect(failure.message, contains('Log in'));
+      expect(failure.canSwitchToLogin, isTrue);
+    });
+
+    test('invalid credentials do not claim the account is missing', () {
+      final failure = AuthFailure.fromFirebaseCode('invalid-credential');
+
+      expect(failure.message, 'Email or password is incorrect.');
+      expect(failure.canSwitchToLogin, isFalse);
     });
 
     test('notifies listeners on backend stream events', () async {
@@ -156,15 +176,31 @@ void main() {
       expect(AuthService.displayNameFromEmail('  '), 'Friend');
     });
 
-    test('signUp with blank name falls back to the email-derived name',
-        () async {
-      final backend = FakeAuthBackend();
-      final service = AuthService(backend: backend);
-      final user = await service.signUp('spencer.bright@x.com', 'secret123',
-          displayName: '  ');
-      expect(user.displayName, 'Spencer Bright');
-      expect(user.firstName, 'Spencer');
-      backend.dispose();
-    });
+    test(
+      'signUp with blank name falls back to the email-derived name',
+      () async {
+        final backend = FakeAuthBackend();
+        final service = AuthService(backend: backend);
+        final user = await service.signUp(
+          'spencer.bright@x.com',
+          'secret123',
+          displayName: '  ',
+        );
+        expect(user.displayName, 'Spencer Bright');
+        expect(user.firstName, 'Spencer');
+        backend.dispose();
+      },
+    );
+    test(
+      'getIdToken exposes the backend token (null when signed out)',
+      () async {
+        final backend = FakeAuthBackend();
+        final service = AuthService(backend: backend);
+        expect(await service.getIdToken(), isNull);
+        await service.signIn('a@x.com', 'secret123');
+        expect(await service.getIdToken(), 'tok-fake');
+        backend.dispose();
+      },
+    );
   });
 }

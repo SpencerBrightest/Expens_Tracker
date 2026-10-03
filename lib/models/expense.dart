@@ -10,6 +10,7 @@ class Expense {
     required this.amount,
     required this.categoryId,
     required this.note,
+    this.subcategory = '',
     required this.date,
     this.paymentMethod,
     this.summary,
@@ -24,6 +25,7 @@ class Expense {
   final double amount;
   final String categoryId;
   final String note;
+  final String subcategory;
   final DateTime date;
   final String? paymentMethod;
   final String? summary;
@@ -33,10 +35,14 @@ class Expense {
   String effectiveSummary(String categoryName) {
     final s = summary?.trim();
     if (s != null && s.isNotEmpty) return s;
-    final amt = amount % 1 == 0
-        ? amount.toInt().toString()
-        : amount.toString();
-    return '$amt XAF — $categoryName, $note';
+    final amt = amount % 1 == 0 ? amount.toInt().toString() : amount.toString();
+    final description = <String>{
+      subcategory.trim(),
+      note.trim(),
+    }.where((part) => part.isNotEmpty).join(', ');
+    return description.isEmpty
+        ? '$amt XAF — $categoryName'
+        : '$amt XAF — $categoryName, $description';
   }
 
   Expense copyWith({
@@ -44,6 +50,7 @@ class Expense {
     double? amount,
     String? categoryId,
     String? note,
+    String? subcategory,
     DateTime? date,
     String? paymentMethod,
     String? summary,
@@ -54,6 +61,7 @@ class Expense {
       amount: amount ?? this.amount,
       categoryId: categoryId ?? this.categoryId,
       note: note ?? this.note,
+      subcategory: subcategory ?? this.subcategory,
       date: date ?? this.date,
       paymentMethod: paymentMethod ?? this.paymentMethod,
       summary: summary ?? this.summary,
@@ -66,6 +74,7 @@ class Expense {
       'amount': amount,
       'categoryId': categoryId,
       'note': note,
+      'subcategory': subcategory,
       'date': date.millisecondsSinceEpoch,
       'paymentMethod': paymentMethod,
       'summary': summary,
@@ -79,6 +88,7 @@ class Expense {
       amount: (map['amount'] as num).toDouble(),
       categoryId: map['categoryId'] as String,
       note: map['note'] as String,
+      subcategory: map['subcategory'] as String? ?? map['note'] as String,
       date: DateTime.fromMillisecondsSinceEpoch(map['date'] as int),
       paymentMethod: map['paymentMethod'] as String?,
       summary: map['summary'] as String?,
@@ -95,6 +105,7 @@ class Expense {
         other.amount == amount &&
         other.categoryId == categoryId &&
         other.note == note &&
+        other.subcategory == subcategory &&
         other.date == date &&
         other.paymentMethod == paymentMethod &&
         other.summary == summary;
@@ -102,12 +113,13 @@ class Expense {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        amount,
-        categoryId,
-        note,
-        date,
-        paymentMethod,
-        summary,
-      );
+    id,
+    amount,
+    categoryId,
+    note,
+    subcategory,
+    date,
+    paymentMethod,
+    summary,
+  );
 }

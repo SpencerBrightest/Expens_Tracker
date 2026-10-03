@@ -17,9 +17,7 @@ abstract final class AppTheme {
         onSurface: AppColors.textPrimary,
       ),
     );
-    final text = base.textTheme.apply(
-      fontFamily: 'Plus Jakarta Sans',
-    );
+    final text = base.textTheme.apply(fontFamily: 'Plus Jakarta Sans');
     return base.copyWith(
       textTheme: text,
       appBarTheme: const AppBarTheme(
@@ -30,9 +28,7 @@ abstract final class AppTheme {
       cardTheme: CardThemeData(
         color: AppColors.surface,
         elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         shadowColor: AppColors.textPrimary.withValues(alpha: 0.04),
       ),
       filledButtonTheme: FilledButtonThemeData(
@@ -41,10 +37,7 @@ abstract final class AppTheme {
           foregroundColor: Colors.white,
           minimumSize: const Size.fromHeight(52),
           shape: const StadiumBorder(),
-          textStyle: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -61,10 +54,7 @@ abstract final class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: AppColors.primary,
-            width: 1.5,
-          ),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(

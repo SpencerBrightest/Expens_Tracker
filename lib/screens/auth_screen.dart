@@ -45,25 +45,33 @@ class _AuthScreenState extends State<AuthScreen> {
       if (_isLogin) {
         await auth.signIn(_email.text, _password.text);
       } else {
-        await auth.signUp(
-          _email.text,
-          _password.text,
-          displayName: _name.text,
-        );
+        await auth.signUp(_email.text, _password.text, displayName: _name.text);
       }
       if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/dashboard');
+    } on AuthFailure catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          action: e.canSwitchToLogin
+              ? SnackBarAction(
+                  label: 'Log in',
+                  onPressed: () => setState(() => _isLogin = true),
+                )
+              : null,
+        ),
+      );
     } on ArgumentError catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.message)));
     } catch (_) {
-      // Generic on purpose: never leak whether an email exists.
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Invalid email or password. Please try again.'),
+        SnackBar(
+          content: Text(
+            _isLogin ? 'Could not log in. Please try again.' : 'Could not create account. Check your connection and try again.',
+          ),
         ),
       );
     } finally {
@@ -75,10 +83,12 @@ class _AuthScreenState extends State<AuthScreen> {
     setState(() => _googleBusy = true);
     try {
       await context.read<AuthService>().signInWithGoogle();
-      if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/dashboard');
     } on AuthCancelledException {
       // User dismissed the picker: stay silent.
+    } on AuthFailure catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.message)));
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -95,32 +105,28 @@ class _AuthScreenState extends State<AuthScreen> {
     setState(() => _phoneBusy = true);
     try {
       await context.read<AuthService>().startPhoneSignIn(
-            phone: _phone.text,
-            onCodeSent: (vid) {
-              if (!mounted) return;
-              setState(() {
-                _verificationId = vid;
-                _codeSent = true;
-              });
-            },
-            onError: (message) {
-              if (!mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(message)),
-              );
-            },
-          );
+        phone: _phone.text,
+        onCodeSent: (vid) {
+          if (!mounted) return;
+          setState(() {
+            _verificationId = vid;
+            _codeSent = true;
+          });
+        },
+        onError: (message) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(message)));
+        },
+      );
     } on ArgumentError catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.message)));
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not send code. Please try again.'),
-        ),
+        const SnackBar(content: Text('Could not send code. Please try again.')),
       );
     } finally {
       if (mounted) setState(() => _phoneBusy = false);
@@ -133,22 +139,21 @@ class _AuthScreenState extends State<AuthScreen> {
     setState(() => _phoneBusy = true);
     try {
       await context.read<AuthService>().confirmPhoneCode(
-            verificationId: vid,
-            smsCode: _smsCode.text,
-          );
+        verificationId: vid,
+        smsCode: _smsCode.text,
+      );
+    } on AuthFailure catch (e) {
       if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/dashboard');
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.message)));
     } on ArgumentError catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.message)));
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Invalid code. Please try again.'),
-        ),
+        const SnackBar(content: Text('Invalid code. Please try again.')),
       );
     } finally {
       if (mounted) setState(() => _phoneBusy = false);
@@ -230,8 +235,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         children: [
                           const Text(
                             'Sign in with your phone number.',
-                            style:
-                                TextStyle(color: AppColors.textSecondary),
+                            style: TextStyle(color: AppColors.textSecondary),
                           ),
                           const SizedBox(height: 12),
                           TextField(
@@ -246,9 +250,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             const SizedBox(height: 12),
                             const Text(
                               'Enter SMS code',
-                              style: TextStyle(
-                                color: AppColors.textSecondary,
-                              ),
+                              style: TextStyle(color: AppColors.textSecondary),
                             ),
                             const SizedBox(height: 8),
                             TextField(
@@ -262,8 +264,9 @@ class _AuthScreenState extends State<AuthScreen> {
                           ],
                           const SizedBox(height: 16),
                           FilledButton(
-                            onPressed:
-                                _phoneBusy ? null : (_codeSent ? _verifyCode : _sendCode),
+                            onPressed: _phoneBusy
+                                ? null
+                                : (_codeSent ? _verifyCode : _sendCode),
                             child: _phoneBusy
                                 ? const SizedBox(
                                     width: 20,
@@ -273,9 +276,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                       color: Colors.white,
                                     ),
                                   )
-                                : Text(
-                                    _codeSent ? 'Verify' : 'Send code',
-                                  ),
+                                : Text(_codeSent ? 'Verify' : 'Send code'),
                           ),
                         ],
                       ),
@@ -287,77 +288,74 @@ class _AuthScreenState extends State<AuthScreen> {
                       padding: const EdgeInsets.all(20),
                       child: Column(
                         children: [
-                        if (!_isLogin)
+                          if (!_isLogin)
+                            TextField(
+                              controller: _name,
+                              textCapitalization: TextCapitalization.words,
+                              decoration: const InputDecoration(
+                                labelText: 'Full Name',
+                                hintText: 'e.g. Spencer Bright',
+                              ),
+                            ),
+                          if (!_isLogin) const SizedBox(height: 12),
                           TextField(
-                            controller: _name,
-                            textCapitalization:
-                                TextCapitalization.words,
+                            controller: _email,
+                            keyboardType: TextInputType.emailAddress,
                             decoration: const InputDecoration(
-                              labelText: 'Full Name',
-                              hintText: 'e.g. Spencer Bright',
+                              labelText: 'Email Address',
+                              hintText: 'e.g. spenzerbrightest@gmail.com',
                             ),
                           ),
-                        if (!_isLogin) const SizedBox(height: 12),
-                        TextField(
-                          controller: _email,
-                          keyboardType: TextInputType.emailAddress,
-                          decoration: const InputDecoration(
-                            labelText: 'Email Address',
-                            hintText: 'e.g. spenzerbrightest@gmail.com',
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: _password,
-                          obscureText: _obscure,
-                          decoration: InputDecoration(
-                            labelText: 'Password',
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscure
-                                    ? Icons.visibility_outlined
-                                    : Icons.visibility_off_outlined,
-                              ),
-                              onPressed: () => setState(
-                                () => _obscure = !_obscure,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        FilledButton(
-                          onPressed: _busy ? null : _submit,
-                          child: _busy
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : Text(
-                                  _isLogin ? 'Log in' : 'Create account',
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _password,
+                            obscureText: _obscure,
+                            decoration: InputDecoration(
+                              labelText: 'Password',
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscure
+                                      ? Icons.visibility_outlined
+                                      : Icons.visibility_off_outlined,
                                 ),
-                        ),
-                        const SizedBox(height: 12),
-                        OutlinedButton(
-                          onPressed:
-                              (_busy || _googleBusy) ? null : _signInWithGoogle,
-                          child: _googleBusy
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Text('Continue with Google'),
-                        ),
-                      ],
+                                onPressed: () =>
+                                    setState(() => _obscure = !_obscure),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          FilledButton(
+                            onPressed: _busy ? null : _submit,
+                            child: _busy
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : Text(_isLogin ? 'Log in' : 'Create account'),
+                          ),
+                          const SizedBox(height: 12),
+                          OutlinedButton(
+                            onPressed: (_busy || _googleBusy)
+                                ? null
+                                : _signInWithGoogle,
+                            child: _googleBusy
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text('Continue with Google'),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
                 TextButton(
                   onPressed: () => setState(() => _isLogin = !_isLogin),
                   child: Text(

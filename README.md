@@ -6,46 +6,27 @@ Firebase is initialized from the generated `lib/firebase_options.dart`.
 Signed-out users are sent to Login; expenses are saved under the signed-in
 user's Firestore account.
 
-To run with Gemini note cleanup enabled, put `GEMINI_API_KEY` in the ignored
-root `.env` file and run:
-
 ```powershell
-.\tool\run_flutter_with_env.ps1 run
+flutter run
 ```
 
-Pass additional Flutter arguments after `run`, for example:
+## AI note cleanup (server-side proxy)
+
+Long expense notes (>120 chars) are cleaned through the authenticated Cloud
+Function `getGeminiSummary` (`functions/src/index.ts`, region
+`us-central1`), which holds the Gemini key as a Functions secret. The Flutter
+client never embeds an API key — `ProxyLlmBackend` sends only the note plus
+the Firebase ID token. Short notes use the instant template summary
+`"<amount> XAF — <Category>, <note>"`.
+
+Deploy backend changes with:
 
 ```powershell
-.\tool\run_flutter_with_env.ps1 run -d chrome
+firebase deploy --only firestore:rules,functions
 ```
 
-Gemini cleanup is used only for expense notes longer than 120 characters; short
-notes use the instant template summary. A Gemini key compiled into a client app
-can be extracted, so production deployments should call Gemini through a
-server-side endpoint instead.
-
-# Ndoh Expense Tracker
-
-## Run
-
-Firebase is initialized from the generated `lib/firebase_options.dart`.
-Signed-out users are sent to Login; expenses are saved under the signed-in
-user's Firestore account.
-
-To run with Gemini note cleanup enabled, put `GEMINI_API_KEY` in the ignored
-root `.env` file and run:
+The Gemini secret itself is set out-of-band and never committed:
 
 ```powershell
-.\tool\run_flutter_with_env.ps1 run
+firebase functions:secrets:set GEMINI_API_KEY
 ```
-
-Pass additional Flutter arguments after `run`, for example:
-
-```powershell
-.\tool\run_flutter_with_env.ps1 run -d chrome
-```
-
-Gemini cleanup is used only for expense notes longer than 120 characters; short
-notes use the instant template summary. A Gemini key compiled into a client app
-can be extracted, so production deployments should call Gemini through a
-server-side endpoint instead.

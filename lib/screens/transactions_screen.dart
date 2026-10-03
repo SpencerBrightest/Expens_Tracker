@@ -1,10 +1,11 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 
 import '../data/dummy_data.dart';
 import '../models/expense.dart';
 import '../providers/expense_store.dart';
+import '../services/expense_report_service.dart';
 import '../services/firestore_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/expense_tile.dart';
@@ -23,7 +24,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   static const _pageSize = 20;
 
   List<Expense>? _remote;
-  DocumentSnapshot<Map<String, dynamic>>? _cursor;
+  ExpenseCursor? _cursor;
   bool _loading = true;
   bool _loadingMore = false;
   bool _done = false;
@@ -75,6 +76,19 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     }
   }
 
+  Future<void> _downloadPdf(Expense expense) async {
+    final store = context.read<ExpenseStore>();
+    final reportService = ExpenseReportService();
+    final categoryName = store.categoryFor(expense).name;
+    final pdfBytes = await reportService.buildPdfBytes(
+      expense: expense,
+      categoryName: categoryName,
+    );
+
+    if (!mounted) return;
+    await Printing.layoutPdf(onLayout: (_) async => pdfBytes);
+  }
+
   @override
   Widget build(BuildContext context) {
     final store = context.watch<ExpenseStore>();
@@ -91,10 +105,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
             children: [
               const Text(
                 'History',
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 12),
               const TextField(
@@ -119,9 +130,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                     ),
                   ),
                   title: Text(xafFormat.format(store.totalSpent)),
-                  subtitle: Text(
-                    'spent • ${expenses.length} transactions',
-                  ),
+                  subtitle: Text('spent • ${expenses.length} transactions'),
                 ),
               ),
               const SizedBox(height: 12),
@@ -136,7 +145,11 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 ...expenses.map(
                   (e) => Padding(
                     padding: const EdgeInsets.only(bottom: 10),
-                    child: ExpenseTile.forExpense(context, e),
+                    child: ExpenseTile.forExpense(
+                      context,
+                      e,
+                      onDownloadReport: () => _downloadPdf(e),
+                    ),
                   ),
                 ),
               if (showPager && !_loading && !_done)
