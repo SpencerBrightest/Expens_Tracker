@@ -2,7 +2,7 @@ name: expense_tracker
 description: "An AI powered expense tracker app built with flutter + Firebase authentication to make it easier for users to authenticate"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: "none" # Remove this line if you wish to publish to pub.dev
 
 # The following defines the version and build number for your application.
 version: 1.0.0+1
@@ -27,6 +27,8 @@ dependencies:
   timezone: ^0.11.1
   http: ^1.6.0
   google_sign_in: ^7.2.0
+  pdf: ^3.13.1
+  printing: ^5.15.1
 
 dev_dependencies:
   flutter_test:
@@ -50,10 +52,3 @@ flutter:
   # Registered your asset folder here so the build system can package the icon image
   assets:
     - asset/
-
-
-
-
-
-
-

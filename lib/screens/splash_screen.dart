@@ -1,7 +1,5 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
-
 import '../theme/app_colors.dart';
 
 /// Splash: Stitch reference + 3 large solid dots centered near bottom.
