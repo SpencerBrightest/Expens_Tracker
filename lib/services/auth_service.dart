@@ -219,19 +219,27 @@ class FirebaseAuthBackend implements AuthBackend {
 
   @override
   Future<NdohUser> signInWithGoogle() async {
-    GoogleSignInAccount account;
     try {
-      account = await _googleFlow();
-    } on GoogleSignInException catch (e) {
-      if (e.code == GoogleSignInExceptionCode.canceled) {
-        throw const AuthCancelledException();
+      if (kIsWeb) {
+        final provider = GoogleAuthProvider();
+        provider.addScope('email');
+        final cred = await _auth.signInWithPopup(provider);
+        return _toUser(cred.user!);
       }
-      throw const AuthFailure(
-        'Google sign-in could not complete. Check that Google sign-in is '
-        'enabled in Firebase and try again.',
-      );
-    }
-    try {
+
+      GoogleSignInAccount account;
+      try {
+        account = await _googleFlow();
+      } on GoogleSignInException catch (e) {
+        if (e.code == GoogleSignInExceptionCode.canceled) {
+          throw const AuthCancelledException();
+        }
+        throw const AuthFailure(
+          'Google sign-in could not complete. Check that Google sign-in is '
+          'enabled in Firebase and try again.',
+        );
+      }
+
       final idToken = account.authentication.idToken;
       if (idToken == null) {
         throw const AuthFailure(
