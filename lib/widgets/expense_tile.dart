@@ -18,6 +18,7 @@ class ExpenseTile extends StatelessWidget {
     required this.isIncome,
     required this.icon,
     required this.color,
+    this.onDownloadReport,
   });
   final String title;
   final String subtitle;
@@ -25,9 +26,14 @@ class ExpenseTile extends StatelessWidget {
   final bool isIncome;
   final IconData icon;
   final Color color;
+  final VoidCallback? onDownloadReport;
 
   /// Builds a tile from store state (category lookup + XAF formatting).
-  factory ExpenseTile.forExpense(BuildContext context, Expense expense) {
+  factory ExpenseTile.forExpense(
+    BuildContext context,
+    Expense expense, {
+    VoidCallback? onDownloadReport,
+  }) {
     final store = context.watch<ExpenseStore>();
     final cat = store.categoryFor(expense);
     final date = DateFormat('MMM d, y').format(expense.date);
@@ -43,6 +49,7 @@ class ExpenseTile extends StatelessWidget {
       isIncome: false,
       icon: categoryIcon(cat.iconCodePoint),
       color: Color(cat.colorValue),
+      onDownloadReport: onDownloadReport,
     );
   }
 
@@ -66,12 +73,26 @@ class ExpenseTile extends StatelessWidget {
           subtitle,
           style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
         ),
-        trailing: Text(
-          amountLabel,
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: isIncome ? AppColors.success : AppColors.textPrimary,
-          ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              amountLabel,
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: isIncome ? AppColors.success : AppColors.textPrimary,
+              ),
+            ),
+            if (onDownloadReport != null) ...[
+              const SizedBox(width: 8),
+              IconButton(
+                tooltip: 'Download PDF report',
+                visualDensity: VisualDensity.compact,
+                onPressed: onDownloadReport,
+                icon: const Icon(Icons.download_outlined, size: 18),
+              ),
+            ],
+          ],
         ),
       ),
     );
